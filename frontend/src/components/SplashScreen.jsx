@@ -16,7 +16,12 @@ export default function SplashScreen({ onFinish }) {
     <div className={`splash-screen ${fadingOut ? "fade-out" : ""}`}>
       <h1 className="splash-title">Snap2Find</h1>
       <p className="splash-tagline">Ctrl+F for real life.</p>
-      <p className="splash-author">Meet Patel</p>
+      <div className="splash-footer">
+        <p className="splash-author">
+          Crafted with <span className="emoji-pop">💡</span> & <span className="emoji-pop">☕</span> by <br/>
+          <strong>Meet Patel</strong>
+        </p>
+      </div>
     </div>
   );
 }

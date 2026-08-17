@@ -1,31 +1,48 @@
 :root {
-  --ink: #1B2A4A;
-  --ink-soft: #4A5A7A;
-  --paper: #F6F1E7;
-  --paper-raised: #FFFFFF;
-  --accent: #D9A441;
-  --accent-dark: #B9852B;
-  --rust: #C1502E;
-  --sage: #5F8161;
-  --line: rgba(27, 42, 74, 0.14);
-  --dot: rgba(27, 42, 74, 0.06);
+  --bg: #EEF2F6; /* Toned down from blinding white */
+  --surface: rgba(255, 255, 255, 0.6);
+  --surface-raised: rgba(255, 255, 255, 0.85);
+  --surface-border: rgba(255, 255, 255, 1);
+  --outline: rgba(15, 23, 42, 0.08);
+  --text-main: #0F172A;
+  --text-muted: #64748B;
+  
+  --accent-solid: #6366F1;
+  --accent-solid-dark: #4F46E5;
+  --accent-gradient: linear-gradient(135deg, #6366F1, #8B5CF6);
+  --accent-glow: rgba(99, 102, 241, 0.15);
+  
+  --dot-color: rgba(15, 23, 42, 0.04);
+  
+  --success: #10B981;
+  --success-bg: rgba(16, 185, 129, 0.15);
+  --error: #EF4444;
+  --error-bg: rgba(239, 68, 68, 0.15);
 
   font-family: "Inter", sans-serif;
-  color: var(--ink);
-  background-color: var(--paper);
+  color: var(--text-main);
 }
 
 [data-theme="dark"] {
-  --ink: #F3EEE3;
-  --ink-soft: #B9C2D6;
-  --paper: #12182A;
-  --paper-raised: #1B2340;
-  --accent: #E4B75C;
-  --accent-dark: #F0CB7E;
-  --rust: #E2775A;
-  --sage: #7FB283;
-  --line: rgba(243, 238, 227, 0.14);
-  --dot: rgba(243, 238, 227, 0.05);
+  --bg: #0F172A; /* Slightly softer than pitch black */
+  --surface: rgba(30, 41, 59, 0.5);
+  --surface-raised: rgba(30, 41, 59, 0.8);
+  --surface-border: rgba(255, 255, 255, 0.08);
+  --outline: rgba(255, 255, 255, 0.1);
+  --text-main: #F8FAFC;
+  --text-muted: #94A3B8;
+  
+  --accent-solid: #818CF8;
+  --accent-solid-dark: #6366F1;
+  --accent-gradient: linear-gradient(135deg, #818CF8, #C084FC);
+  --accent-glow: rgba(129, 140, 248, 0.15);
+  
+  --dot-color: rgba(255, 255, 255, 0.03);
+  
+  --success: #34D399;
+  --success-bg: rgba(52, 211, 153, 0.15);
+  --error: #F87171;
+  --error-bg: rgba(248, 113, 113, 0.15);
 }
 
 * {
@@ -35,14 +52,19 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 1px 1px, var(--dot) 1px, transparent 0) 0 0/24px 24px,
-    var(--paper);
-  transition: background-color 0.2s ease;
+  background-color: var(--bg);
+  background-image: 
+    radial-gradient(var(--dot-color) 1px, transparent 1px),
+    radial-gradient(circle at 15% 50%, var(--accent-glow), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.10), transparent 25%);
+  background-size: 24px 24px, 100% 100%, 100% 100%;
+  background-position: 0 0, 0 0, 0 0;
+  background-attachment: fixed;
+  transition: background-color 0.4s ease, color 0.4s ease;
 }
 
-h1, h2, h3 {
-  font-family: "Zilla Slab", serif;
+h1, h2, h3, .font-heading {
+  font-family: "Outfit", sans-serif;
   margin: 0;
 }
 

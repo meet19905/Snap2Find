@@ -36,21 +36,29 @@ function App() {
       <StatsStrip />
 
       <div className="tab-switcher">
-        <button className={activeTab === "search" ? "tab active" : "tab"} onClick={() => setActiveTab("search")}>
-          Find lost item
-        </button>
         <button className={activeTab === "found" ? "tab active" : "tab"} onClick={() => setActiveTab("found")}>
-          Report found item
+          Report Found
         </button>
-        <button className={activeTab === "browse" ? "tab active" : "tab"} onClick={() => setActiveTab("browse")}>
-          Browse all
+        <button className={activeTab === "search" ? "tab active" : "tab"} onClick={() => setActiveTab("search")}>
+          Search / Report Lost
+        </button>
+        <button className={activeTab === "browse-lost" ? "tab active" : "tab"} onClick={() => setActiveTab("browse-lost")}>
+          Lost Gallery
+        </button>
+        <button className={activeTab === "browse-found" ? "tab active" : "tab"} onClick={() => setActiveTab("browse-found")}>
+          Found Gallery
+        </button>
+        <button className={activeTab === "reunited" ? "tab active" : "tab"} onClick={() => setActiveTab("reunited")}>
+          Reunited
         </button>
       </div>
 
       <main>
-        {activeTab === "search" && <SearchLost />}
         {activeTab === "found" && <ReportFound />}
-        {activeTab === "browse" && <BrowseItems />}
+        {activeTab === "search" && <SearchLost />}
+        {activeTab === "browse-lost" && <BrowseItems type="lost" status="unclaimed" title="Browse lost items" subtitle="Did you find something? See if anyone is looking for it." />}
+        {activeTab === "browse-found" && <BrowseItems type="found" status="unclaimed" title="Browse found items" subtitle="No photo of what you lost? Browse everything reported so far." />}
+        {activeTab === "reunited" && <BrowseItems status="recovered" title="Reunited items" subtitle="Success stories! Items that found their way home." hideCategories={true} />}
       </main>
 
       <Footer />

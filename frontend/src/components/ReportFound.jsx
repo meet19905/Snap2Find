@@ -8,6 +8,7 @@ export default function ReportFound() {
   const [preview, setPreview] = useState(null);
   const [phone, setPhone] = useState("");
   const [description, setDescription] = useState("");
+  const [location, setLocation] = useState("");
   const [status, setStatus] = useState("idle");
   const [resultCategory, setResultCategory] = useState("");
 
@@ -27,6 +28,7 @@ export default function ReportFound() {
     formData.append("image", image);
     formData.append("phone_number", phone);
     formData.append("description", description);
+    formData.append("location", location);
 
     try {
       const res = await axios.post(`${API_BASE}/api/found`, formData);
@@ -61,6 +63,17 @@ export default function ReportFound() {
       </label>
 
       <label className="field-label">
+        Location (optional)
+        <input
+          type="text"
+          placeholder="e.g. Library, Cafeteria"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+        />
+      </label>
+
+
+      <label className="field-label">
         Description (optional)
         <textarea
           placeholder="Where did you find it?"
@@ -71,7 +84,7 @@ export default function ReportFound() {
       </label>
 
       <button type="submit" className="submit-btn" disabled={status === "loading"}>
-        {status === "loading" ? "Uploading..." : "Report item"}
+        {status === "loading" ? "Uploading & Analyzing..." : "Report item"}
       </button>
 
       {status === "success" && (

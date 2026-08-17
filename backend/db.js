@@ -8,6 +8,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     type TEXT NOT NULL,
     category TEXT,
+    location TEXT,
     image_path TEXT,
     embedding TEXT,
     phone_number TEXT,
@@ -17,6 +18,12 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
+
+try {
+  db.exec(`ALTER TABLE items ADD COLUMN location TEXT;`);
+} catch (err) {
+  // Column might already exist, ignore
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS visits (

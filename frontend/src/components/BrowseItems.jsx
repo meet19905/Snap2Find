@@ -5,42 +5,44 @@ import ResultCard from "./ResultCard";
 
 const CATEGORIES = ["all", "calculator", "ID card", "wallet", "earbuds", "keys", "water bottle", "phone", "bag"];
 
-export default function BrowseItems() {
+export default function BrowseItems({ type = "found", status = "unclaimed", title, subtitle, hideCategories = false }) {
   const [items, setItems] = useState([]);
   const [activeCategory, setActiveCategory] = useState("all");
-  const [status, setStatus] = useState("loading");
+  const [fetchStatus, setFetchStatus] = useState("loading");
 
   useEffect(() => {
-    setStatus("loading");
+    setFetchStatus("loading");
     axios
-      .get(`${API_BASE}/api/items`, { params: { category: activeCategory } })
+      .get(`${API_BASE}/api/items`, { params: { category: activeCategory, type, status } })
       .then((res) => {
         setItems(res.data.items);
-        setStatus("success");
+        setFetchStatus("success");
       })
-      .catch(() => setStatus("error"));
-  }, [activeCategory]);
+      .catch(() => setFetchStatus("error"));
+  }, [activeCategory, type, status]);
 
   return (
     <div className="panel">
-      <h2>Browse found items</h2>
-      <p className="panel-subtitle">No photo of what you lost? Browse everything reported so far.</p>
+      <h2>{title}</h2>
+      <p className="panel-subtitle">{subtitle}</p>
 
-      <div className="chip-row">
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            className={activeCategory === cat ? "chip active" : "chip"}
-            onClick={() => setActiveCategory(cat)}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
+      {!hideCategories && (
+        <div className="chip-row">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              className={activeCategory === cat ? "chip active" : "chip"}
+              onClick={() => setActiveCategory(cat)}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {status === "loading" && <p className="status-message">Loading...</p>}
-      {status === "error" && <p className="status-message error">Couldn't load items. Is the backend running?</p>}
-      {status === "success" && items.length === 0 && (
+      {fetchStatus === "loading" && <p className="status-message">Loading...</p>}
+      {fetchStatus === "error" && <p className="status-message error">Couldn't load items. Is the backend running?</p>}
+      {fetchStatus === "success" && items.length === 0 && (
         <p className="status-message">Nothing found in this category yet.</p>
       )}
 

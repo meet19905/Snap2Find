@@ -3,7 +3,7 @@ import axios from "axios";
 import { API_BASE } from "../config";
 
 export default function StatsStrip() {
-  const [stats, setStats] = useState({ totalFound: 0, totalRecovered: 0, totalVisitors: 0 });
+  const [stats, setStats] = useState({ totalFound: 0, totalRecovered: 0, stillMissing: 0, totalVisitors: 0 });
 
   useEffect(() => {
     axios
@@ -21,6 +21,10 @@ export default function StatsStrip() {
       <div className="stat-stub">
         <span className="stat-number">{stats.totalRecovered}</span>
         <span className="stat-label">Reunited</span>
+      </div>
+      <div className="stat-stub">
+        <span className="stat-number">{stats.stillMissing}</span>
+        <span className="stat-label">Still missing</span>
       </div>
       <div className="stat-stub">
         <span className="stat-number">{stats.totalVisitors}</span>

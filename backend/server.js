@@ -65,18 +65,19 @@ app.get('/', (req, res) => {
 
 app.post('/api/found', upload.single('image'), async (req, res) => {
   try {
-    const { phone_number, description } = req.body;
+    const { phone_number, description, location } = req.body;
     const imagePath = req.file.path;
 
     const { category, embedding } = await getClassificationAndEmbedding(imagePath);
 
     const stmt = db.prepare(`
-      INSERT INTO items (type, category, image_path, embedding, phone_number, description)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO items (type, category, location, image_path, embedding, phone_number, description)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     const result = stmt.run(
       'found',
       category,
+      location || '',
       imagePath,
       JSON.stringify(embedding),
       phone_number,
@@ -95,21 +96,43 @@ app.post('/api/found', upload.single('image'), async (req, res) => {
   }
 });
 
-app.post('/api/search', upload.single('image'), async (req, res) => {
+app.post('/api/lost', upload.single('image'), async (req, res) => {
   try {
+    const { phone_number, description, location } = req.body;
     const imagePath = req.file.path;
     const { embedding, category } = await getClassificationAndEmbedding(imagePath);
 
-    const foundItems = db.prepare(`SELECT * FROM items WHERE type = 'found' AND status = 'unclaimed'`).all();
+    const stmt = db.prepare(`
+      INSERT INTO items (type, category, location, image_path, embedding, phone_number, description)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      'lost',
+      category,
+      location || '',
+      imagePath,
+      JSON.stringify(embedding),
+      phone_number || '',
+      description || ''
+    );
+
+    let foundItems;
+    if (location && location.trim() !== '') {
+      foundItems = db.prepare(`SELECT * FROM items WHERE type = 'found' AND status = 'unclaimed' AND LOWER(location) LIKE LOWER(?)`).all(`%${location.trim()}%`);
+    } else {
+      foundItems = db.prepare(`SELECT * FROM items WHERE type = 'found' AND status = 'unclaimed'`).all();
+    }
 
     const results = foundItems.map((item) => {
       const itemEmbedding = JSON.parse(item.embedding);
       const similarity = cosineSimilarity(embedding, itemEmbedding);
       return {
         id: item.id,
+        type: item.type,
         category: item.category,
+        location: item.location,
         image_path: item.image_path,
-        phone_number: item.phone_number,
+        phone_number: item.phone_number ? `***-***-${item.phone_number.slice(-4)}` : '',
         description: item.description,
         similarity: similarity,
       };
@@ -127,9 +150,10 @@ app.post('/api/search', upload.single('image'), async (req, res) => {
 
 app.get('/api/stats', (req, res) => {
   const totalFound = db.prepare(`SELECT COUNT(*) as c FROM items WHERE type = 'found'`).get().c;
-  const totalRecovered = db.prepare(`SELECT COUNT(*) as c FROM items WHERE type = 'found' AND status = 'recovered'`).get().c;
+  const totalRecovered = db.prepare(`SELECT COUNT(*) as c FROM items WHERE status = 'recovered'`).get().c;
+  const stillMissing = db.prepare(`SELECT COUNT(*) as c FROM items WHERE status = 'unclaimed'`).get().c;
   const totalVisitors = db.prepare(`SELECT COUNT(*) as c FROM visits`).get().c;
-  res.json({ totalFound, totalRecovered, totalVisitors });
+  res.json({ totalFound, totalRecovered, stillMissing, totalVisitors });
 });
 
 app.post('/api/visit', (req, res) => {
@@ -138,20 +162,29 @@ app.post('/api/visit', (req, res) => {
 });
 
 app.get('/api/items', (req, res) => {
-  const { category } = req.query;
+  const { category, type = 'found', status = 'unclaimed' } = req.query;
   let items;
-  if (category && category !== 'all') {
+
+  if (status === 'recovered') {
+    items = db.prepare(`SELECT * FROM items WHERE status = 'recovered' ORDER BY created_at DESC`).all();
+  } else if (category && category !== 'all') {
     items = db.prepare(`
-      SELECT * FROM items WHERE type = 'found' AND status = 'unclaimed' AND category = ?
+      SELECT * FROM items WHERE type = ? AND status = ? AND category = ?
       ORDER BY created_at DESC
-    `).all(category);
+    `).all(type, status, category);
   } else {
     items = db.prepare(`
-      SELECT * FROM items WHERE type = 'found' AND status = 'unclaimed'
+      SELECT * FROM items WHERE type = ? AND status = ?
       ORDER BY created_at DESC
-    `).all();
+    `).all(type, status);
   }
-  res.json({ success: true, items });
+
+  const maskedItems = items.map(item => ({
+    ...item,
+    phone_number: item.phone_number ? `***-***-${item.phone_number.slice(-4)}` : ''
+  }));
+
+  res.json({ success: true, items: maskedItems });
 });
 
 app.post('/api/items/:id/recover', (req, res) => {
@@ -161,6 +194,49 @@ app.post('/api/items/:id/recover', (req, res) => {
   }
   db.prepare(`UPDATE items SET status = 'recovered', claimed_by_phone = ? WHERE id = ?`).run(claimant_phone, req.params.id);
   res.json({ success: true });
+});
+
+app.post('/api/items/:id/verify-claim', upload.single('image'), async (req, res) => {
+  try {
+    const itemId = req.params.id;
+    const { claimant_phone } = req.body;
+    
+    if (!claimant_phone || claimant_phone.trim().length < 10) {
+      return res.status(400).json({ success: false, error: 'A valid phone number is required.' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'A verification photo is required.' });
+    }
+
+    const item = db.prepare(`SELECT * FROM items WHERE id = ?`).get(itemId);
+    if (!item) {
+      return res.status(404).json({ success: false, error: 'Item not found.' });
+    }
+    if (item.status === 'recovered') {
+      return res.status(400).json({ success: false, error: 'Item is already recovered.' });
+    }
+
+    const imagePath = req.file.path;
+    const { embedding } = await getClassificationAndEmbedding(imagePath);
+    
+    const originalEmbedding = JSON.parse(item.embedding);
+    const similarity = cosineSimilarity(embedding, originalEmbedding);
+    
+    if (similarity > 0.80) {
+      db.prepare(`UPDATE items SET status = 'recovered', claimed_by_phone = ? WHERE id = ?`).run(claimant_phone, itemId);
+      res.json({ success: true, similarity: similarity, verified: true });
+    } else {
+      res.json({ 
+        success: false, 
+        similarity: similarity, 
+        verified: false, 
+        error: `AI Verification Failed (Similarity: ${(similarity*100).toFixed(0)}%). The photo does not match closely enough.`
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 const PORT = process.env.PORT || 5000;
