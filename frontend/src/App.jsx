@@ -36,11 +36,11 @@ function App() {
       <StatsStrip />
 
       <div className="tab-switcher">
-        <button className={activeTab === "found" ? "tab active" : "tab"} onClick={() => setActiveTab("found")}>
-          Report Found
-        </button>
         <button className={activeTab === "search" ? "tab active" : "tab"} onClick={() => setActiveTab("search")}>
-          Search / Report Lost
+          Search for Item
+        </button>
+        <button className={activeTab === "found" ? "tab active" : "tab"} onClick={() => setActiveTab("found")}>
+          Report Found Item
         </button>
         <button className={activeTab === "browse-lost" ? "tab active" : "tab"} onClick={() => setActiveTab("browse-lost")}>
           Lost Gallery
@@ -54,11 +54,11 @@ function App() {
       </div>
 
       <main>
-        {activeTab === "found" && <ReportFound />}
         {activeTab === "search" && <SearchLost />}
-        {activeTab === "browse-lost" && <BrowseItems type="lost" status="unclaimed" title="Browse lost items" subtitle="Did you find something? See if anyone is looking for it." />}
-        {activeTab === "browse-found" && <BrowseItems type="found" status="unclaimed" title="Browse found items" subtitle="No photo of what you lost? Browse everything reported so far." />}
-        {activeTab === "reunited" && <BrowseItems status="recovered" title="Reunited items" subtitle="Success stories! Items that found their way home." hideCategories={true} />}
+        {activeTab === "found" && <ReportFound />}
+        {activeTab === "browse-lost" && <BrowseItems type="lost" status="unclaimed" title="Lost Gallery" subtitle="Items people are looking for. Did you find one of these?" />}
+        {activeTab === "browse-found" && <BrowseItems type="found" status="unclaimed" title="Found Gallery" subtitle="Items people have found. Is one of these yours?" />}
+        {activeTab === "reunited" && <BrowseItems status="recovered" title="Reunited" subtitle="Success stories & claimed items. Verify yours wasn't falsely claimed." hideCategories={true} />}
       </main>
 
       <Footer />

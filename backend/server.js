@@ -31,21 +31,15 @@ const upload = multer({ storage });
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL;
 
 async function getClassificationAndEmbedding(imagePath) {
-  const form1 = new FormData();
-  form1.append('file', fs.createReadStream(imagePath));
-  const classifyRes = await axios.post(`${AI_SERVICE_URL}/classify`, form1, {
-    headers: form1.getHeaders(),
-  });
-
-  const form2 = new FormData();
-  form2.append('file', fs.createReadStream(imagePath));
-  const embedRes = await axios.post(`${AI_SERVICE_URL}/embed`, form2, {
-    headers: form2.getHeaders(),
+  const form = new FormData();
+  form.append('file', fs.createReadStream(imagePath));
+  const res = await axios.post(`${AI_SERVICE_URL}/analyze`, form, {
+    headers: form.getHeaders(),
   });
 
   return {
-    category: classifyRes.data.top_category,
-    embedding: embedRes.data.embedding,
+    category: res.data.top_category,
+    embedding: res.data.embedding,
   };
 }
 
@@ -102,26 +96,9 @@ app.post('/api/lost', upload.single('image'), async (req, res) => {
     const imagePath = req.file.path;
     const { embedding, category } = await getClassificationAndEmbedding(imagePath);
 
-    const stmt = db.prepare(`
-      INSERT INTO items (type, category, location, image_path, embedding, phone_number, description)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-    stmt.run(
-      'lost',
-      category,
-      location || '',
-      imagePath,
-      JSON.stringify(embedding),
-      phone_number || '',
-      description || ''
-    );
-
-    let foundItems;
-    if (location && location.trim() !== '') {
-      foundItems = db.prepare(`SELECT * FROM items WHERE type = 'found' AND status = 'unclaimed' AND LOWER(location) LIKE LOWER(?)`).all(`%${location.trim()}%`);
-    } else {
-      foundItems = db.prepare(`SELECT * FROM items WHERE type = 'found' AND status = 'unclaimed'`).all();
-    }
+    // Fetch all found items (both unclaimed and recovered) so searchers can still see 
+    // if their item was found and falsely claimed by someone else.
+    const foundItems = db.prepare(`SELECT * FROM items WHERE type = 'found'`).all();
 
     const results = foundItems.map((item) => {
       const itemEmbedding = JSON.parse(item.embedding);
@@ -141,7 +118,28 @@ app.post('/api/lost', upload.single('image'), async (req, res) => {
     results.sort((a, b) => b.similarity - a.similarity);
     const topMatches = results.slice(0, 5);
 
-    res.json({ success: true, searched_category: category, matches: topMatches });
+    const highestSimilarity = topMatches.length > 0 ? topMatches[0].similarity : 0;
+    let savedToGallery = false;
+
+    // Only save as a lost item if the highest match is NOT practically identical (similarity < 0.95)
+    if (highestSimilarity < 0.95) {
+      const stmt = db.prepare(`
+        INSERT INTO items (type, category, location, image_path, embedding, phone_number, description)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      stmt.run(
+        'lost',
+        category,
+        location || '',
+        imagePath,
+        JSON.stringify(embedding),
+        phone_number || '',
+        description || ''
+      );
+      savedToGallery = true;
+    }
+
+    res.json({ success: true, searched_category: category, matches: topMatches, saved_to_gallery: savedToGallery });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: err.message });

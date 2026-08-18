@@ -21,7 +21,12 @@ app.add_middleware(
 )
 
 # ---- Load CLIP model (this happens once, when the server starts) ----
-device = "cuda" if torch.cuda.is_available() else "cpu"
+if torch.cuda.is_available():
+    device = "cuda"
+elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+    device = "mps"
+else:
+    device = "cpu"
 model, preprocess = clip.load("ViT-B/32", device=device)
 
 # ---- Our fixed list of categories ----
@@ -75,3 +80,28 @@ async def embed_image(file: UploadFile = File(...)):
     embedding = image_features[0].cpu().tolist()
 
     return {"embedding": embedding, "dimensions": len(embedding)}
+
+
+@app.post("/analyze")
+async def analyze_image(file: UploadFile = File(...)):
+    """Takes an image, returns both embedding and classification in one pass."""
+    image_bytes = await file.read()
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    image_input = preprocess(image).unsqueeze(0).to(device)
+
+    with torch.no_grad():
+        image_features = model.encode_image(image_input)
+        image_features /= image_features.norm(dim=-1, keepdim=True)
+        
+        # Classification
+        similarity = (100.0 * image_features @ text_features.T).softmax(dim=-1)
+        values, indices = similarity[0].topk(1)
+        top_category = CATEGORIES[indices[0]]
+
+    embedding = image_features[0].cpu().tolist()
+
+    return {
+        "top_category": top_category,
+        "embedding": embedding,
+        "dimensions": len(embedding)
+    }
