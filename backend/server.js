@@ -109,7 +109,7 @@ app.post('/api/lost', upload.single('image'), async (req, res) => {
         category: item.category,
         location: item.location,
         image_path: item.image_path,
-        phone_number: item.phone_number ? `***-***-${item.phone_number.slice(-4)}` : '',
+        phone_number: item.phone_number || '',
         description: item.description,
         similarity: similarity,
       };
@@ -121,25 +121,42 @@ app.post('/api/lost', upload.single('image'), async (req, res) => {
     const highestSimilarity = topMatches.length > 0 ? topMatches[0].similarity : 0;
     let savedToGallery = false;
 
-    // Only save as a lost item if the highest match is NOT practically identical (similarity < 0.95)
-    if (highestSimilarity < 0.95) {
-      const stmt = db.prepare(`
-        INSERT INTO items (type, category, location, image_path, embedding, phone_number, description)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
-      stmt.run(
-        'lost',
-        category,
-        location || '',
-        imagePath,
-        JSON.stringify(embedding),
-        phone_number || '',
-        description || ''
-      );
-      savedToGallery = true;
-    }
+    // We no longer auto-save to the gallery based on similarity.
+    // The frontend will explicitly call /api/report-lost if the user requests it.
 
     res.json({ success: true, searched_category: category, matches: topMatches, saved_to_gallery: savedToGallery });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/report-lost', upload.single('image'), async (req, res) => {
+  try {
+    const { phone_number, description, location } = req.body;
+    const imagePath = req.file.path;
+    const { embedding, category } = await getClassificationAndEmbedding(imagePath);
+
+    const stmt = db.prepare(`
+      INSERT INTO items (type, category, location, image_path, embedding, phone_number, description)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    const result = stmt.run(
+      'lost',
+      category,
+      location || '',
+      imagePath,
+      JSON.stringify(embedding),
+      phone_number || '',
+      description || ''
+    );
+
+    res.json({
+      success: true,
+      id: result.lastInsertRowid,
+      category,
+      message: 'Lost item added to gallery successfully!',
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, error: err.message });
@@ -179,7 +196,7 @@ app.get('/api/items', (req, res) => {
 
   const maskedItems = items.map(item => ({
     ...item,
-    phone_number: item.phone_number ? `***-***-${item.phone_number.slice(-4)}` : ''
+    phone_number: item.phone_number || ''
   }));
 
   res.json({ success: true, items: maskedItems });
@@ -220,7 +237,7 @@ app.post('/api/items/:id/verify-claim', upload.single('image'), async (req, res)
     const originalEmbedding = JSON.parse(item.embedding);
     const similarity = cosineSimilarity(embedding, originalEmbedding);
     
-    if (similarity > 0.80) {
+    if (similarity > 0.45) {
       db.prepare(`UPDATE items SET status = 'recovered', claimed_by_phone = ? WHERE id = ?`).run(claimant_phone, itemId);
       res.json({ success: true, similarity: similarity, verified: true });
     } else {

@@ -42,11 +42,8 @@ function App() {
         <button className={activeTab === "found" ? "tab active" : "tab"} onClick={() => setActiveTab("found")}>
           Report Found Item
         </button>
-        <button className={activeTab === "browse-lost" ? "tab active" : "tab"} onClick={() => setActiveTab("browse-lost")}>
-          Lost Gallery
-        </button>
-        <button className={activeTab === "browse-found" ? "tab active" : "tab"} onClick={() => setActiveTab("browse-found")}>
-          Found Gallery
+        <button className={activeTab === "browse-all" ? "tab active" : "tab"} onClick={() => setActiveTab("browse-all")}>
+          Lost & Found Gallery
         </button>
         <button className={activeTab === "reunited" ? "tab active" : "tab"} onClick={() => setActiveTab("reunited")}>
           Reunited
@@ -56,8 +53,7 @@ function App() {
       <main>
         {activeTab === "search" && <SearchLost />}
         {activeTab === "found" && <ReportFound />}
-        {activeTab === "browse-lost" && <BrowseItems type="lost" status="unclaimed" title="Lost Gallery" subtitle="Items people are looking for. Did you find one of these?" />}
-        {activeTab === "browse-found" && <BrowseItems type="found" status="unclaimed" title="Found Gallery" subtitle="Items people have found. Is one of these yours?" />}
+        {activeTab === "browse-all" && <BrowseItems type="all" status="unclaimed" title="Lost & Found Gallery" subtitle="Items people are looking for or have found." />}
         {activeTab === "reunited" && <BrowseItems status="recovered" title="Reunited" subtitle="Success stories & claimed items. Verify yours wasn't falsely claimed." hideCategories={true} />}
       </main>
 

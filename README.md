@@ -12,12 +12,38 @@ AI-powered Lost & Found platform. Upload a photo of a lost or found item — Sna
 
 ## Progress
 
-- [x] AI microservice (Python, FastAPI, CLIP) — image classification + embedding
-- [x] Backend (Node.js, Express, SQLite) — item storage, search, image processing
+- [x] Unified Python backend (FastAPI, SQLite, CLIP) — all API endpoints + AI in one service
 - [x] Frontend (React, Vite) — upload UI, search UI, statistics
 
 ## Tech Stack
 
-- **AI/ML**: Python, FastAPI, OpenAI CLIP (zero-shot classification + visual similarity search)
-- **Backend**: Node.js, Express, SQLite
+- **Backend**: Python, FastAPI, aiosqlite, Pydantic v2
+- **AI/ML**: OpenAI CLIP (zero-shot classification + visual similarity search)
 - **Frontend**: React, Vite
+
+## Quick Start
+
+### Backend (unified)
+
+```bash
+cd ai-service
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --port 5050 --reload
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Run Tests
+
+```bash
+cd ai-service
+source venv/bin/activate
+pytest tests/ -v
+```

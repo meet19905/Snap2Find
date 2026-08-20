@@ -37,8 +37,10 @@
 .tab-switcher {
   display: flex;
   justify-content: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 36px auto;
   gap: 8px;
-  margin-bottom: 36px;
   overflow-x: auto;
   padding: 6px;
   -ms-overflow-style: none;
@@ -567,7 +569,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--bg);
+  background: #0F172A; /* Always dark */
+  color: #F8FAFC;
   z-index: 1000;
   transition: opacity 0.5s ease;
 }
@@ -588,14 +591,14 @@
   font-family: "Outfit", sans-serif;
   font-size: 4.5rem;
   font-weight: 800;
-  background: var(--accent-gradient);
+  background: linear-gradient(135deg, #818CF8, #C084FC); /* Dark mode gradient */
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   animation: splash-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.1s backwards;
 }
 .splash-tagline {
   font-size: 1.2rem;
-  color: var(--text-muted);
+  color: #94A3B8; /* Dark mode muted text */
   font-weight: 600;
   margin-top: 12px;
   animation: fade-up 0.5s ease 0.3s backwards;

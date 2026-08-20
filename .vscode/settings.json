@@ -1,3 +1,8 @@
 {
-  "python.defaultInterpreterPath": "./ai-service/venv/bin/python"
+  "python.defaultInterpreterPath": "${workspaceFolder}/ai-service/venv/bin/python",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/ai-service/venv/lib/python3.13/site-packages",
+    "${workspaceFolder}/ai-service"
+  ],
+  "python.analysis.typeCheckingMode": "basic"
 }

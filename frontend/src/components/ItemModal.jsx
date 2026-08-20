@@ -46,6 +46,8 @@ export default function ItemModal({ item, onClose, onRecovered }) {
       const res = await axios.post(`${API_BASE}/api/items/${item.id}/verify-claim`, formData);
       if (res.data.success) {
         onRecovered(item.id);
+      } else {
+        setError("Unable to verify: " + (res.data.error || "The photo does not match closely enough."));
       }
     } catch (err) {
       console.error(err);
