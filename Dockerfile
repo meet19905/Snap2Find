@@ -45,5 +45,5 @@ EXPOSE 5050
 ENV PORT=5050
 ENV PYTHONUNBUFFERED=1
 
-# Start production uvicorn server
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5050"]
+# Start production uvicorn server on dynamic environment PORT
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-5050}"]
