@@ -13,7 +13,7 @@ RUN npm run build
 # =========================================================
 # Stage 2: Unified FastAPI Backend + AI Model + Static Serving
 # =========================================================
-FROM python:3.11-slim AS runner
+FROM python:3.12-slim AS runner
 
 # Install system build dependencies and git (required for clip git repo)
 RUN apt-get update && apt-get install -y --no-install-recommends \
