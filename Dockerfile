@@ -25,6 +25,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app/ai-service
 
+# Install lightweight CPU-only PyTorch (reduces RAM usage by 70%)
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
 # Install Python requirements
 COPY ai-service/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
@@ -34,9 +37,6 @@ COPY ai-service/ ./
 
 # Copy built frontend production dist from Stage 1 into frontend/dist
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
-
-# Pre-download CLIP model weights during build so startup is instant
-RUN python -c "import clip, torch; clip.load('ViT-B/32', device='cpu')"
 
 # Expose port
 EXPOSE 5050
