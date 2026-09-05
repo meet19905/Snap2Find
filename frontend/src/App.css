@@ -711,3 +711,22 @@
     border-radius: 16px;
   }
 }
+
+/* ---- Image Loading Skeleton & Fade Transitions ---- */
+.tag-image.loading {
+  opacity: 0;
+}
+.tag-image.loaded {
+  opacity: 1;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
+.tag-image-btn {
+  background: linear-gradient(90deg, #f0f2f5 25%, #e6e8ec 37%, #f0f2f5 63%) !important;
+  background-size: 400px 100% !important;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}

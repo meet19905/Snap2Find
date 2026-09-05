@@ -164,11 +164,34 @@ app.post('/api/report-lost', upload.single('image'), async (req, res) => {
 });
 
 app.get('/api/stats', (req, res) => {
-  const totalFound = db.prepare(`SELECT COUNT(*) as c FROM items WHERE type = 'found'`).get().c;
-  const totalRecovered = db.prepare(`SELECT COUNT(*) as c FROM items WHERE status = 'recovered'`).get().c;
-  const stillMissing = db.prepare(`SELECT COUNT(*) as c FROM items WHERE status = 'unclaimed'`).get().c;
+  const items = db.prepare(`SELECT * FROM items`).all();
+  const mergedFound = [];
+  const mergedRecovered = [];
+  const mergedUnclaimed = [];
+
+  const isDuplicate = (item, list) => {
+    for (const m of list) {
+      if (m.category === item.category) {
+        const sim = cosineSimilarity(JSON.parse(item.embedding), JSON.parse(m.embedding));
+        if (sim > 0.85) return true;
+      }
+    }
+    return false;
+  };
+
+  for (const item of items) {
+    if (item.type === 'found' && !isDuplicate(item, mergedFound)) mergedFound.push(item);
+    if (item.status === 'recovered' && !isDuplicate(item, mergedRecovered)) mergedRecovered.push(item);
+    if (item.status === 'unclaimed' && !isDuplicate(item, mergedUnclaimed)) mergedUnclaimed.push(item);
+  }
+
   const totalVisitors = db.prepare(`SELECT COUNT(*) as c FROM visits`).get().c;
-  res.json({ totalFound, totalRecovered, stillMissing, totalVisitors });
+  res.json({ 
+    totalFound: mergedFound.length, 
+    totalRecovered: mergedRecovered.length, 
+    stillMissing: mergedUnclaimed.length, 
+    totalVisitors 
+  });
 });
 
 app.post('/api/visit', (req, res) => {
@@ -183,15 +206,29 @@ app.get('/api/items', (req, res) => {
   if (status === 'recovered') {
     items = db.prepare(`SELECT * FROM items WHERE status = 'recovered' ORDER BY created_at DESC`).all();
   } else if (category && category !== 'all') {
-    items = db.prepare(`
-      SELECT * FROM items WHERE type = ? AND status = ? AND category = ?
-      ORDER BY created_at DESC
-    `).all(type, status, category);
+    if (type === 'all') {
+      items = db.prepare(`
+        SELECT * FROM items WHERE status = ? AND category = ?
+        ORDER BY created_at DESC
+      `).all(status, category);
+    } else {
+      items = db.prepare(`
+        SELECT * FROM items WHERE type = ? AND status = ? AND category = ?
+        ORDER BY created_at DESC
+      `).all(type, status, category);
+    }
   } else {
-    items = db.prepare(`
-      SELECT * FROM items WHERE type = ? AND status = ?
-      ORDER BY created_at DESC
-    `).all(type, status);
+    if (type === 'all') {
+      items = db.prepare(`
+        SELECT * FROM items WHERE status = ?
+        ORDER BY created_at DESC
+      `).all(status);
+    } else {
+      items = db.prepare(`
+        SELECT * FROM items WHERE type = ? AND status = ?
+        ORDER BY created_at DESC
+      `).all(type, status);
+    }
   }
 
   const maskedItems = items.map(item => ({
@@ -199,15 +236,55 @@ app.get('/api/items', (req, res) => {
     phone_number: item.phone_number || ''
   }));
 
-  res.json({ success: true, items: maskedItems });
+  const mergedItems = [];
+  for (const item of maskedItems) {
+    let isDup = false;
+    for (const m of mergedItems) {
+      if (m.category === item.category) {
+        const sim = cosineSimilarity(JSON.parse(item.embedding), JSON.parse(m.embedding));
+        if (sim > 0.85) {
+          isDup = true;
+          // Prefer items that have actual images if one is missing, or keep existing
+          if (!m.image_path && item.image_path) {
+            m.image_path = item.image_path;
+          }
+          break;
+        }
+      }
+    }
+    if (!isDup) mergedItems.push(item);
+  }
+
+  res.json({ success: true, items: mergedItems });
 });
+
+function markItemAndDuplicatesAsRecovered(itemId, claimantPhone) {
+  const item = db.prepare(`SELECT * FROM items WHERE id = ?`).get(itemId);
+  if (!item) return;
+
+  // Mark the primary item as recovered
+  db.prepare(`UPDATE items SET status = 'recovered', claimed_by_phone = ? WHERE id = ?`).run(claimantPhone, itemId);
+
+  // Find and mark highly similar duplicates as recovered to prevent them from showing up again
+  const origEmb = JSON.parse(item.embedding);
+  const allUnclaimed = db.prepare(`SELECT * FROM items WHERE status = 'unclaimed'`).all();
+  
+  for (const other of allUnclaimed) {
+    if (other.id !== item.id && other.category === item.category) {
+      const sim = cosineSimilarity(origEmb, JSON.parse(other.embedding));
+      if (sim > 0.85) {
+        db.prepare(`UPDATE items SET status = 'recovered', claimed_by_phone = ? WHERE id = ?`).run(claimantPhone, other.id);
+      }
+    }
+  }
+}
 
 app.post('/api/items/:id/recover', (req, res) => {
   const { claimant_phone } = req.body;
   if (!claimant_phone || claimant_phone.trim().length < 10) {
     return res.status(400).json({ success: false, error: 'A valid phone number is required to confirm this claim.' });
   }
-  db.prepare(`UPDATE items SET status = 'recovered', claimed_by_phone = ? WHERE id = ?`).run(claimant_phone, req.params.id);
+  markItemAndDuplicatesAsRecovered(req.params.id, claimant_phone);
   res.json({ success: true });
 });
 
@@ -238,7 +315,7 @@ app.post('/api/items/:id/verify-claim', upload.single('image'), async (req, res)
     const similarity = cosineSimilarity(embedding, originalEmbedding);
     
     if (similarity > 0.45) {
-      db.prepare(`UPDATE items SET status = 'recovered', claimed_by_phone = ? WHERE id = ?`).run(claimant_phone, itemId);
+      markItemAndDuplicatesAsRecovered(itemId, claimant_phone);
       res.json({ success: true, similarity: similarity, verified: true });
     } else {
       res.json({ 

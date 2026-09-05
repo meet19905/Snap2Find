@@ -24,8 +24,8 @@
 }
 
 [data-theme="dark"] {
-  --bg: #0F172A; /* Slightly softer than pitch black */
-  --surface: rgba(30, 41, 59, 0.5);
+  --bg: #1E293B; /* Lighter dark mode */
+  --surface: rgba(71, 85, 105, 0.5);
   --surface-raised: rgba(30, 41, 59, 0.8);
   --surface-border: rgba(255, 255, 255, 0.08);
   --outline: rgba(255, 255, 255, 0.1);

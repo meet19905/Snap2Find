@@ -37,24 +37,24 @@ function App() {
 
       <div className="tab-switcher">
         <button className={activeTab === "search" ? "tab active" : "tab"} onClick={() => setActiveTab("search")}>
-          Search for Item
+          I lost something
         </button>
         <button className={activeTab === "found" ? "tab active" : "tab"} onClick={() => setActiveTab("found")}>
-          Report Found Item
+          I found something
         </button>
         <button className={activeTab === "browse-all" ? "tab active" : "tab"} onClick={() => setActiveTab("browse-all")}>
-          Lost & Found Gallery
+          View Lost & Found Gallery
         </button>
         <button className={activeTab === "reunited" ? "tab active" : "tab"} onClick={() => setActiveTab("reunited")}>
-          Reunited
+          View Reunited Items
         </button>
       </div>
 
       <main>
         {activeTab === "search" && <SearchLost />}
         {activeTab === "found" && <ReportFound />}
-        {activeTab === "browse-all" && <BrowseItems type="all" status="unclaimed" title="Lost & Found Gallery" subtitle="Items people are looking for or have found." />}
-        {activeTab === "reunited" && <BrowseItems status="recovered" title="Reunited" subtitle="Success stories & claimed items. Verify yours wasn't falsely claimed." hideCategories={true} />}
+        {activeTab === "browse-all" && <BrowseItems type="all" status="unclaimed" title="Lost & Found Gallery" subtitle="Browse items that people have lost or found." />}
+        {activeTab === "reunited" && <BrowseItems status="recovered" title="Reunited Items" subtitle="Success stories! Check here if your item was claimed." hideCategories={true} />}
       </main>
 
       <Footer />

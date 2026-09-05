@@ -8,9 +8,12 @@ These endpoints are kept for direct AI model access:
 
 from __future__ import annotations
 
+# pyrefly: ignore [missing-import]
 from fastapi import APIRouter, File, UploadFile
 
+# pyrefly: ignore [missing-import]
 from app.ai import analyze_image, classify_image, embed_image
+# pyrefly: ignore [missing-import]
 from app.models import AnalyzeResponse, ClassifyResponse, EmbedResponse
 
 router = APIRouter(tags=["ai"])

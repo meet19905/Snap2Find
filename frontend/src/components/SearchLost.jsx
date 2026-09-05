@@ -126,8 +126,8 @@ export default function SearchLost() {
         <div style={{ marginTop: "1rem" }}>
           {!addedToGallery ? (
             <div className="status-message" style={{ marginBottom: "1.5rem" }}>
-              {matches.length > 0 && <p><strong>None of these are yours?</strong></p>}
-              <p><strong>Add to lost and found gallery.</strong> If someone will find it it will be shown in the lost and found!</p>
+              {matches.length > 0 && <p><strong>None of these are your item?</strong></p>}
+              <p><strong>Add your item to the lost and found gallery.</strong> This way, if someone finds it later, they can reach out to you!</p>
               <button
                 className="submit-btn"
                 onClick={handleAddToGallery}

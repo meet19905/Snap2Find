@@ -60,6 +60,8 @@ class ItemMatch(BaseModel):
     category: str | None = None
     location: str | None = None
     image_path: str | None = None
+    thumb_path: str | None = None
+    matched_image_path: str | None = None
     phone_number: str | None = None
     description: str | None = None
     status: str | None = None

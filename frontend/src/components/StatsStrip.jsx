@@ -14,10 +14,7 @@ export default function StatsStrip() {
 
   return (
     <div className="stats-strip">
-      <div className="stat-stub">
-        <span className="stat-number">{stats.totalFound}</span>
-        <span className="stat-label">Items reported</span>
-      </div>
+
       <div className="stat-stub">
         <span className="stat-number">{stats.totalRecovered}</span>
         <span className="stat-label">Reunited</span>

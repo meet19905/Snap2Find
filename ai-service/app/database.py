@@ -26,7 +26,11 @@ async def get_db() -> aiosqlite.Connection:
 
 
 async def _create_tables(conn: aiosqlite.Connection) -> None:
-    """Create the database tables if they don't exist."""
+    """Create the database tables and performance indexes if they don't exist."""
+    # Enable WAL mode & performance pragmas for concurrent read/write speed
+    await conn.execute("PRAGMA journal_mode=WAL;")
+    await conn.execute("PRAGMA synchronous=NORMAL;")
+
     await conn.execute("""
         CREATE TABLE IF NOT EXISTS items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,6 +38,7 @@ async def _create_tables(conn: aiosqlite.Connection) -> None:
             category TEXT,
             location TEXT,
             image_path TEXT,
+            thumb_path TEXT,
             embedding TEXT,
             phone_number TEXT,
             description TEXT,
@@ -48,6 +53,15 @@ async def _create_tables(conn: aiosqlite.Connection) -> None:
             visited_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    # Check if thumb_path column exists in legacy tables
+    cursor = await conn.execute("PRAGMA table_info(items)")
+    columns = [row[1] for row in await cursor.fetchall()]
+    if "thumb_path" not in columns:
+        await conn.execute("ALTER TABLE items ADD COLUMN thumb_path TEXT")
+
+    # Composite indexes for high-speed filtered queries
+    await conn.execute("CREATE INDEX IF NOT EXISTS idx_items_lookup ON items(status, type, category);")
+    await conn.execute("CREATE INDEX IF NOT EXISTS idx_items_created_at ON items(created_at DESC);")
     await conn.commit()
 
 

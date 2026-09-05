@@ -45,7 +45,7 @@ CATEGORIES: list[str] = [
 
 # Pre-encode category text prompts once for faster inference
 text_prompts = clip.tokenize([f"a photo of a {c}" for c in CATEGORIES]).to(device)
-with torch.no_grad():
+with torch.inference_mode():
     text_features = model.encode_text(text_prompts)
     text_features /= text_features.norm(dim=-1, keepdim=True)
 
@@ -69,7 +69,7 @@ def classify_image(image_bytes: bytes) -> tuple[str, list[dict]]:
     """
     image_input = _prepare_image(image_bytes)
 
-    with torch.no_grad():
+    with torch.inference_mode():
         image_features = model.encode_image(image_input)
         image_features /= image_features.norm(dim=-1, keepdim=True)
 
@@ -92,7 +92,7 @@ def embed_image(image_bytes: bytes) -> list[float]:
     """
     image_input = _prepare_image(image_bytes)
 
-    with torch.no_grad():
+    with torch.inference_mode():
         image_features = model.encode_image(image_input)
         image_features /= image_features.norm(dim=-1, keepdim=True)
 
@@ -107,7 +107,7 @@ def analyze_image(image_bytes: bytes) -> tuple[str, list[float]]:
     """
     image_input = _prepare_image(image_bytes)
 
-    with torch.no_grad():
+    with torch.inference_mode():
         image_features = model.encode_image(image_input)
         image_features /= image_features.norm(dim=-1, keepdim=True)
 

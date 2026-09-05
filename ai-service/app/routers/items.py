@@ -26,22 +26,20 @@ from app.models import (
     SuccessResponse,
     VerifyClaimResponse,
 )
-from app.utils import cosine_similarity, mask_phone
+from app.utils import cosine_similarity, mask_phone, process_and_save_image
 
 router = APIRouter(prefix="/api", tags=["items"])
 
 
-async def _save_upload(file: UploadFile) -> tuple[str, bytes]:
-    """Save an uploaded file and return (relative_path, raw_bytes).
+async def _save_upload(file: UploadFile) -> tuple[str, str, bytes]:
+    """Save an uploaded file as optimized WebP image & thumbnail.
 
-    File naming matches the Node.js convention: timestamp-originalname.
+    Returns:
+        (image_path, thumb_path, raw_bytes)
     """
     contents = await file.read()
-    unique_name = f"{int(time.time() * 1000)}-{file.filename}"
-    dest = UPLOAD_DIR / unique_name
-    dest.write_bytes(contents)
-    # Return path relative to the ai-service root (matches Node.js: "uploads/...")
-    return f"uploads/{unique_name}", contents
+    image_path, thumb_path = process_and_save_image(contents, file.filename or "upload.jpg", UPLOAD_DIR)
+    return image_path, thumb_path, contents
 
 
 # --------------------------------------------------------------------------
@@ -55,27 +53,27 @@ async def report_found(
     description: str = Form(""),
     location: str = Form(""),
 ):
-    """Upload a photo of a found item. AI classifies, stores it, and checks for lost item matches."""
+    """Upload a photo of a found item. AI classifies it, saves to DB, and checks for lost item matches."""
     if not phone_number or len(phone_number.strip()) < 10:
         raise HTTPException(
             status_code=400,
             detail="A valid phone number is required.",
         )
 
-    image_path, image_bytes = await _save_upload(image)
+    image_path, thumb_path, image_bytes = await _save_upload(image)
     category, embedding = analyze_image(image_bytes)
 
     db = await get_db()
     cursor = await db.execute(
         """
-        INSERT INTO items (type, category, location, image_path, embedding, phone_number, description)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO items (type, category, location, image_path, thumb_path, embedding, phone_number, description)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        ("found", category, location, image_path, json.dumps(embedding), phone_number.strip(), description),
+        ("found", category, location, image_path, thumb_path, json.dumps(embedding), phone_number.strip(), description),
     )
-    new_item_id = cursor.lastrowid
     await db.commit()
-
+    inserted_id = cursor.lastrowid
+    
     # Search among lost items
     cursor = await db.execute("SELECT * FROM items WHERE type = 'lost' AND status = 'unclaimed'")
     lost_items = await cursor.fetchall()
@@ -84,14 +82,16 @@ async def report_found(
     for item in lost_items:
         item_embedding = json.loads(item["embedding"])
         sim = cosine_similarity(embedding, item_embedding)
+        item_dict = dict(item)
         results.append({
-            "id": item["id"],
-            "type": item["type"],
-            "category": item["category"],
-            "location": item["location"],
-            "image_path": item["image_path"],
-            "phone_number": item["phone_number"],
-            "description": item["description"],
+            "id": item_dict["id"],
+            "type": item_dict["type"],
+            "category": item_dict["category"],
+            "location": item_dict["location"],
+            "image_path": item_dict["image_path"],
+            "thumb_path": item_dict.get("thumb_path") or item_dict["image_path"],
+            "phone_number": item_dict["phone_number"],
+            "description": item_dict["description"],
             "similarity": sim,
         })
 
@@ -101,10 +101,48 @@ async def report_found(
 
     return FoundItemResponse(
         success=True,
-        id=new_item_id,
+        id=inserted_id,
         category=category,
         message="Found item reported successfully!",
         matches=[ItemMatch(**m) for m in top_matches],
+    )
+
+# --------------------------------------------------------------------------
+# POST /api/report-found — Explicitly add a found item to the gallery
+# --------------------------------------------------------------------------
+
+@router.post("/report-found", response_model=FoundItemResponse)
+async def explicit_report_found(
+    image: UploadFile = File(...),
+    phone_number: str = Form(...),
+    description: str = Form(""),
+    location: str = Form(""),
+):
+    """Upload a photo of a found item to add to the gallery."""
+    if not phone_number or len(phone_number.strip()) < 10:
+        raise HTTPException(
+            status_code=400,
+            detail="A valid phone number is required.",
+        )
+
+    image_path, thumb_path, image_bytes = await _save_upload(image)
+    category, embedding = analyze_image(image_bytes)
+
+    db = await get_db()
+    cursor = await db.execute(
+        """
+        INSERT INTO items (type, category, location, image_path, thumb_path, embedding, phone_number, description)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        ("found", category, location, image_path, thumb_path, json.dumps(embedding), phone_number.strip(), description),
+    )
+    await db.commit()
+
+    return FoundItemResponse(
+        success=True,
+        id=cursor.lastrowid,
+        category=category,
+        message="Found item added to gallery successfully!",
     )
 
 
@@ -126,7 +164,7 @@ async def search_lost(
             detail="A valid phone number is required.",
         )
 
-    image_path, image_bytes = await _save_upload(image)
+    image_path, thumb_path, image_bytes = await _save_upload(image)
     category, embedding = analyze_image(image_bytes)
 
     db = await get_db()
@@ -135,16 +173,18 @@ async def search_lost(
 
     results: list[dict] = []
     for item in found_items:
-        item_embedding = json.loads(item["embedding"])
+        item_dict = dict(item)
+        item_embedding = json.loads(item_dict["embedding"])
         sim = cosine_similarity(embedding, item_embedding)
         results.append({
-            "id": item["id"],
-            "type": item["type"],
-            "category": item["category"],
-            "location": item["location"],
-            "image_path": item["image_path"],
-            "phone_number": item["phone_number"],
-            "description": item["description"],
+            "id": item_dict["id"],
+            "type": item_dict["type"],
+            "category": item_dict["category"],
+            "location": item_dict["location"],
+            "image_path": item_dict["image_path"],
+            "thumb_path": item_dict.get("thumb_path") or item_dict["image_path"],
+            "phone_number": mask_phone(item_dict["phone_number"]),
+            "description": item_dict["description"],
             "similarity": sim,
         })
 
@@ -153,7 +193,7 @@ async def search_lost(
     top_matches = results[:5]
 
     highest_similarity = top_matches[0]["similarity"] if top_matches else 0
-    saved_to_gallery = False
+    saved_to_gallery = True
 
     if top_matches and highest_similarity >= settings.lost_duplicate_threshold:
         # Max match found: auto-reunite the item
@@ -166,6 +206,7 @@ async def search_lost(
         await db.commit()
         # Ensure the frontend gets the updated status
         top_matches[0]["status"] = "recovered"
+        saved_to_gallery = False
 
     return LostSearchResponse(
         success=True,
@@ -193,16 +234,16 @@ async def report_lost(
             detail="A valid phone number is required.",
         )
 
-    image_path, image_bytes = await _save_upload(image)
+    image_path, thumb_path, image_bytes = await _save_upload(image)
     category, embedding = analyze_image(image_bytes)
 
     db = await get_db()
     cursor = await db.execute(
         """
-        INSERT INTO items (type, category, location, image_path, embedding, phone_number, description)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO items (type, category, location, image_path, thumb_path, embedding, phone_number, description)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        ("lost", category, location, image_path, json.dumps(embedding), phone_number, description),
+        ("lost", category, location, image_path, thumb_path, json.dumps(embedding), phone_number, description),
     )
     await db.commit()
 
@@ -269,11 +310,45 @@ async def list_items(
     rows = await cursor.fetchall()
 
     items = []
-    for row in rows:
-        item_dict = dict(row)
-        # Remove 'embedding' from the response — it's internal data
-        item_dict.pop("embedding", None)
-        items.append(ItemMatch(**item_dict))
+    
+    if status == "recovered":
+        merged_items = []
+        for row in rows:
+            row_dict = dict(row)
+            try:
+                row_emb = json.loads(row_dict["embedding"])
+            except (KeyError, ValueError, TypeError):
+                row_emb = None
+            
+            merged = False
+            for m_item in merged_items:
+                if m_item["category"] == row_dict["category"]:
+                    m_emb = m_item.get("_raw_embedding")
+                    if row_emb and m_emb and cosine_similarity(row_emb, m_emb) >= settings.verify_similarity_threshold:
+                        if not m_item.get("matched_image_path") and row_dict["image_path"] != m_item["image_path"]:
+                            m_item["matched_image_path"] = row_dict["image_path"]
+                        merged = True
+                        break
+            if not merged:
+                row_dict["_raw_embedding"] = row_emb
+                merged_items.append(row_dict)
+        
+        for item_dict in merged_items:
+            item_dict.pop("embedding", None)
+            item_dict.pop("_raw_embedding", None)
+            if not item_dict.get("thumb_path"):
+                item_dict["thumb_path"] = item_dict.get("image_path")
+            item_dict["phone_number"] = mask_phone(item_dict.get("phone_number"))
+            items.append(ItemMatch(**item_dict))
+    else:
+        for row in rows:
+            item_dict = dict(row)
+            # Remove 'embedding' from the response — it's internal data
+            item_dict.pop("embedding", None)
+            if not item_dict.get("thumb_path"):
+                item_dict["thumb_path"] = item_dict.get("image_path")
+            item_dict["phone_number"] = mask_phone(item_dict.get("phone_number"))
+            items.append(ItemMatch(**item_dict))
 
     return ItemListResponse(success=True, items=items)
 
@@ -328,7 +403,7 @@ async def verify_claim(
     if item["status"] == "recovered":
         raise HTTPException(status_code=400, detail="Item is already recovered.")
 
-    image_path, image_bytes = await _save_upload(image)
+    image_path, thumb_path, image_bytes = await _save_upload(image)
     _, embedding = analyze_image(image_bytes)
 
     original_embedding = json.loads(item["embedding"])

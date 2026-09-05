@@ -64,7 +64,12 @@ export default function ItemModal({ item, onClose, onRecovered }) {
           ✕
         </button>
 
-        <img src={item.imageUrl} alt={item.category} className="modal-image" />
+        <div style={{ display: "flex", width: "100%", maxHeight: "50vh", overflow: "hidden", borderTopLeftRadius: "12px", borderTopRightRadius: "12px" }}>
+          <img src={item.imageUrl} alt={item.category} className="modal-image" style={{ width: item.matched_image_path ? "50%" : "100%", borderRadius: 0, objectFit: "cover" }} />
+          {item.matched_image_path && (
+            <img src={`${API_BASE}/${item.matched_image_path}`} alt="Match" className="modal-image" style={{ width: "50%", borderRadius: 0, objectFit: "cover", borderLeft: "2px dashed rgba(255,255,255,0.3)" }} />
+          )}
+        </div>
 
         <div className="modal-info">
           <span className="tag-category">{item.category}</span>

@@ -4,5 +4,10 @@ __pycache__/
 venv/
 .env
 *.db
+*.db-shm
+*.db-wal
 .DS_Store
 uploads/
+.vscode/
+test.jpg
+frontend/dist/

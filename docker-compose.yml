@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  snap2find:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5050:5050"
+    environment:
+      - PORT=5050
+    volumes:
+      - snap2find-data:/app/ai-service/uploads
+      - snap2find-db:/app/ai-service/snap2find.db
+    restart: unless-stopped
+
+volumes:
+  snap2find-data:
+  snap2find-db:
