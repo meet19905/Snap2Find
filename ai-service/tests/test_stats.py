@@ -18,7 +18,7 @@ class TestStats:
         """Stats should update after reporting a found item."""
         # Report a found item
         client.post(
-            "/api/found",
+            "/api/report-found",
             data={"phone_number": "9876543210", "description": "Test", "location": "Library"},
             files={"image": ("test.png", test_image_bytes, "image/png")},
         )

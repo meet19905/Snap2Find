@@ -14,6 +14,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated
 
+# pyrefly: ignore [missing-import]
 from pydantic import BaseModel, Field, field_validator
 
 

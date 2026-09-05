@@ -5,6 +5,7 @@ Replicates GET /api/stats and POST /api/visit from the Node.js backend.
 
 from __future__ import annotations
 
+# pyrefly: ignore [missing-import]
 from fastapi import APIRouter
 
 from app.database import get_db

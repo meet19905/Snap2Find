@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import time
 
+# pyrefly: ignore [missing-import]
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from app.ai import analyze_image
@@ -53,7 +54,7 @@ async def report_found(
     description: str = Form(""),
     location: str = Form(""),
 ):
-    """Upload a photo of a found item. AI classifies it, saves to DB, and checks for lost item matches."""
+    """Upload a photo of a found item. AI classifies it and checks for lost item matches without auto-saving to gallery."""
     if not phone_number or len(phone_number.strip()) < 10:
         raise HTTPException(
             status_code=400,
@@ -64,15 +65,6 @@ async def report_found(
     category, embedding = analyze_image(image_bytes)
 
     db = await get_db()
-    cursor = await db.execute(
-        """
-        INSERT INTO items (type, category, location, image_path, thumb_path, embedding, phone_number, description)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        ("found", category, location, image_path, thumb_path, json.dumps(embedding), phone_number.strip(), description),
-    )
-    await db.commit()
-    inserted_id = cursor.lastrowid
     
     # Search among lost items
     cursor = await db.execute("SELECT * FROM items WHERE type = 'lost' AND status = 'unclaimed'")
@@ -101,9 +93,9 @@ async def report_found(
 
     return FoundItemResponse(
         success=True,
-        id=inserted_id,
+        id=0,
         category=category,
-        message="Found item reported successfully!",
+        message="Found item analyzed successfully!",
         matches=[ItemMatch(**m) for m in top_matches],
     )
 

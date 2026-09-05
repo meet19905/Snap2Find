@@ -11,7 +11,7 @@ class TestReportFound:
     """Test POST /api/found."""
 
     def test_report_found_success(self, client, test_image_bytes):
-        """Should classify image and store a found item."""
+        """Should classify image and return matches without auto-inserting into DB."""
         response = client.post(
             "/api/found",
             data={
@@ -24,10 +24,9 @@ class TestReportFound:
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert isinstance(data["id"], int)
-        assert data["id"] > 0
+        assert data["id"] == 0
         assert isinstance(data["category"], str)
-        assert data["message"] == "Found item reported successfully!"
+        assert data["message"] == "Found item analyzed successfully!"
 
     def test_report_found_without_optional_fields(self, client, test_image_bytes):
         """Should work with only the required fields (image + phone)."""
@@ -54,9 +53,9 @@ class TestSearchLost:
 
     def test_search_lost_with_matches(self, client, test_image_bytes):
         """Should return matches from found items."""
-        # First, report a found item
+        # First, report a found item into gallery
         client.post(
-            "/api/found",
+            "/api/report-found",
             data={"phone_number": "9876543210", "description": "Found wallet"},
             files={"image": ("found.png", test_image_bytes, "image/png")},
         )
@@ -78,7 +77,7 @@ class TestSearchLost:
         """Matched items should have masked phone numbers."""
         # Report a found item
         client.post(
-            "/api/found",
+            "/api/report-found",
             data={"phone_number": "9876543210"},
             files={"image": ("found.png", test_image_bytes, "image/png")},
         )
@@ -114,7 +113,7 @@ class TestBrowseItems:
         """Should list found items with default filters."""
         # Add a found item
         client.post(
-            "/api/found",
+            "/api/report-found",
             data={"phone_number": "9876543210"},
             files={"image": ("item.png", test_image_bytes, "image/png")},
         )
@@ -126,9 +125,9 @@ class TestBrowseItems:
         assert len(data["items"]) >= 1
 
     def test_browse_items_default_params(self, client, test_image_bytes):
-        """Default params should be type=found, status=unclaimed."""
+        """Default GET /api/items should return unclaimed found items."""
         client.post(
-            "/api/found",
+            "/api/report-found",
             data={"phone_number": "9876543210"},
             files={"image": ("item.png", test_image_bytes, "image/png")},
         )
@@ -142,7 +141,7 @@ class TestBrowseItems:
         """Should filter by category when provided."""
         # The mock AI always returns "wallet" as category
         client.post(
-            "/api/found",
+            "/api/report-found",
             data={"phone_number": "9876543210"},
             files={"image": ("item.png", test_image_bytes, "image/png")},
         )
@@ -162,7 +161,7 @@ class TestBrowseItems:
     def test_browse_items_category_all(self, client, test_image_bytes):
         """Category 'all' should return all items."""
         client.post(
-            "/api/found",
+            "/api/report-found",
             data={"phone_number": "9876543210"},
             files={"image": ("item.png", test_image_bytes, "image/png")},
         )
@@ -176,7 +175,7 @@ class TestBrowseItems:
         """Should list recovered items regardless of type."""
         # Create and recover an item
         res = client.post(
-            "/api/found",
+            "/api/report-found",
             data={"phone_number": "9876543210"},
             files={"image": ("item.png", test_image_bytes, "image/png")},
         )
@@ -195,7 +194,7 @@ class TestBrowseItems:
     def test_browse_items_have_masked_phone(self, client, test_image_bytes):
         """Listed items should have masked phone numbers."""
         client.post(
-            "/api/found",
+            "/api/report-found",
             data={"phone_number": "9876543210"},
             files={"image": ("item.png", test_image_bytes, "image/png")},
         )
@@ -211,11 +210,11 @@ class TestRecoverItem:
     """Test POST /api/items/{id}/recover."""
 
     def test_recover_success(self, client, test_image_bytes):
-        """Should mark an item as recovered."""
+        """Should mark item as recovered with claimant phone."""
         res = client.post(
-            "/api/found",
+            "/api/report-found",
             data={"phone_number": "9876543210"},
-            files={"image": ("item.png", test_image_bytes, "image/png")},
+            files={"image": ("found.png", test_image_bytes, "image/png")},
         )
         item_id = res.json()["id"]
 
@@ -224,14 +223,15 @@ class TestRecoverItem:
             data={"claimant_phone": "1234567890"},
         )
         assert response.status_code == 200
-        assert response.json()["success"] is True
+        data = response.json()
+        assert data["success"] is True
 
     def test_recover_invalid_phone(self, client, test_image_bytes):
-        """Should reject short phone numbers."""
+        """Should reject empty or short claimant phone number."""
         res = client.post(
-            "/api/found",
+            "/api/report-found",
             data={"phone_number": "9876543210"},
-            files={"image": ("item.png", test_image_bytes, "image/png")},
+            files={"image": ("found.png", test_image_bytes, "image/png")},
         )
         item_id = res.json()["id"]
 
@@ -252,7 +252,7 @@ class TestVerifyClaim:
         so cosine similarity = 1.0, which is > 0.65 threshold.
         """
         res = client.post(
-            "/api/found",
+            "/api/report-found",
             data={"phone_number": "9876543210"},
             files={"image": ("found.png", test_image_bytes, "image/png")},
         )
@@ -272,7 +272,7 @@ class TestVerifyClaim:
     def test_verify_claim_invalid_phone(self, client, test_image_bytes):
         """Should reject invalid phone number."""
         res = client.post(
-            "/api/found",
+            "/api/report-found",
             data={"phone_number": "9876543210"},
             files={"image": ("found.png", test_image_bytes, "image/png")},
         )
@@ -288,7 +288,7 @@ class TestVerifyClaim:
     def test_verify_claim_missing_image(self, client, test_image_bytes):
         """Should fail if no verification image is uploaded."""
         res = client.post(
-            "/api/found",
+            "/api/report-found",
             data={"phone_number": "9876543210"},
             files={"image": ("found.png", test_image_bytes, "image/png")},
         )
@@ -313,7 +313,7 @@ class TestVerifyClaim:
         """Should reject claims on already-recovered items."""
         # Create and recover an item
         res = client.post(
-            "/api/found",
+            "/api/report-found",
             data={"phone_number": "9876543210"},
             files={"image": ("found.png", test_image_bytes, "image/png")},
         )
