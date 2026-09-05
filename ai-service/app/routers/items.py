@@ -109,6 +109,7 @@ async def explicit_report_found(
     phone_number: str = Form(...),
     description: str = Form(""),
     location: str = Form(""),
+    category: str | None = Form(None),
 ):
     """Upload a photo of a found item to add to the gallery."""
     if not phone_number or len(phone_number.strip()) < 10:
@@ -118,7 +119,8 @@ async def explicit_report_found(
         )
 
     image_path, thumb_path, image_bytes = await _save_upload(image)
-    category, embedding = analyze_image(image_bytes)
+    ai_category, embedding = analyze_image(image_bytes)
+    final_category = category.strip() if category and category.strip() else ai_category
 
     db = await get_db()
     cursor = await db.execute(
@@ -126,14 +128,14 @@ async def explicit_report_found(
         INSERT INTO items (type, category, location, image_path, thumb_path, embedding, phone_number, description)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        ("found", category, location, image_path, thumb_path, json.dumps(embedding), phone_number.strip(), description),
+        ("found", final_category, location, image_path, thumb_path, json.dumps(embedding), phone_number.strip(), description),
     )
     await db.commit()
 
     return FoundItemResponse(
         success=True,
         id=cursor.lastrowid,
-        category=category,
+        category=final_category,
         message="Found item added to gallery successfully!",
     )
 
@@ -218,6 +220,7 @@ async def report_lost(
     phone_number: str = Form(...),
     description: str = Form(""),
     location: str = Form(""),
+    category: str | None = Form(None),
 ):
     """Upload a photo of a lost item to add to the gallery."""
     if not phone_number or len(phone_number.strip()) < 10:
@@ -227,7 +230,8 @@ async def report_lost(
         )
 
     image_path, thumb_path, image_bytes = await _save_upload(image)
-    category, embedding = analyze_image(image_bytes)
+    ai_category, embedding = analyze_image(image_bytes)
+    final_category = category.strip() if category and category.strip() else ai_category
 
     db = await get_db()
     cursor = await db.execute(
@@ -235,14 +239,14 @@ async def report_lost(
         INSERT INTO items (type, category, location, image_path, thumb_path, embedding, phone_number, description)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        ("lost", category, location, image_path, thumb_path, json.dumps(embedding), phone_number, description),
+        ("lost", final_category, location, image_path, thumb_path, json.dumps(embedding), phone_number, description),
     )
     await db.commit()
 
     return FoundItemResponse(
         success=True,
         id=cursor.lastrowid,
-        category=category,
+        category=final_category,
         message="Lost item added to gallery successfully!",
     )
 

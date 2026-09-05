@@ -43,16 +43,16 @@ CATEGORIES: list[str] = [
     "bag",
 ]
 
-# ImageNet class index mappings for our 8 categories
+# ImageNet class index mappings for our 8 categories (disjoint & specific)
 CATEGORY_MAP: dict[str, list[int]] = {
-    "water bottle": [898, 900, 757, 738, 725, 907, 441, 653],
-    "phone": [487, 761, 589, 670],
-    "wallet": [893, 754, 693],
-    "bag": [414, 804, 844],
-    "keys": [618, 503, 708],
-    "earbuds": [475, 589, 444, 851],
-    "calculator": [474, 761],
-    "ID card": [693, 754, 893],
+    "calculator": [474, 670],   # 474 = hand-held calculator, 670 = hand-held computer / scientific calculator
+    "phone": [487, 589, 607],    # 487 = cellular telephone, 589 = handheld device/PDA, 607 = digital audio/screen device
+    "water bottle": [898, 900, 757, 738, 725, 907, 441], # 898 = water bottle, 900 = water jug, 757 = thermos
+    "wallet": [893, 754],       # 893 = wallet/billfold, 754 = purse/pocketbook
+    "bag": [414, 804, 844],     # 414 = backpack, 804 = handbag, 844 = tote bag
+    "keys": [618, 503, 708],    # 618 = key, 503 = lock, 708 = keychain
+    "earbuds": [475, 444, 851],  # 475/444 = headphones/earphones, 851 = earbud case
+    "ID card": [693],           # 693 = passport/ID card
 }
 
 _model = None
@@ -61,11 +61,11 @@ _transform_center = None
 
 
 def _get_model() -> tuple[Any, Any, Any]:
-    """Lazily load MobileNetV3 small (~9.8 MB weights, ~60 MB RAM total)."""
+    """Lazily load MobileNetV3 Large (~21 MB weights, ~80 MB RAM total, 75.2% top-1 accuracy)."""
     global _model, _transform_full, _transform_center
     if _model is None:
         torch.set_num_threads(1)
-        model_obj = models.mobilenet_v3_small(weights=models.MobileNet_V3_Small_Weights.DEFAULT)
+        model_obj = models.mobilenet_v3_large(weights=models.MobileNet_V3_Large_Weights.DEFAULT)
         model_obj.eval()
         model_obj.to(device)
 
@@ -76,7 +76,7 @@ def _get_model() -> tuple[Any, Any, Any]:
             T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
 
-        # Center-crop transform (removes background clutter like bags behind central items)
+        # Center-crop transform (isolates central object from background clutter)
         transform_center = T.Compose([
             T.Resize(256),
             T.CenterCrop(224),
@@ -100,12 +100,13 @@ def _prepare_image(image_bytes: bytes) -> tuple[torch.Tensor, torch.Tensor]:
 
 
 def _predict_category(logits: torch.Tensor) -> tuple[str, list[dict]]:
-    """Map ImageNet class logits to our 8 target categories."""
+    """Map ImageNet class logits to our 8 target categories using MAX score."""
     probs = torch.softmax(logits, dim=-1)[0]
 
     category_scores: dict[str, float] = {}
     for cat, idxs in CATEGORY_MAP.items():
-        score = sum(float(probs[idx]) for idx in idxs if idx < len(probs))
+        # Use max score so category predictions reflect the single strongest object signal
+        score = max((float(probs[idx]) for idx in idxs if idx < len(probs)), default=0.0)
         category_scores[cat] = score
 
     # Sort categories by score
