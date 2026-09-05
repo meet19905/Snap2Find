@@ -47,3 +47,27 @@ class TestVisit:
         response = client.get("/api/stats")
         data = response.json()
         assert data["totalVisitors"] == 2
+
+
+class TestResetData:
+    """Test POST /api/reset-data."""
+
+    def test_reset_data_resets_all_counts(self, client, test_image_bytes):
+        """Should erase all items and visit counts."""
+        client.post(
+            "/api/report-found",
+            data={"phone_number": "9876543210"},
+            files={"image": ("test.png", test_image_bytes, "image/png")},
+        )
+        client.post("/api/visit")
+
+        res = client.post("/api/reset-data")
+        assert res.status_code == 200
+        assert res.json()["success"] is True
+
+        stats_res = client.get("/api/stats")
+        data = stats_res.json()
+        assert data["totalFound"] == 0
+        assert data["stillMissing"] == 0
+        assert data["totalRecovered"] == 0
+        assert data["totalVisitors"] == 0

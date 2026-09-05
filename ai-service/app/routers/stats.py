@@ -73,3 +73,28 @@ async def record_visit():
     await db.execute("INSERT INTO visits DEFAULT VALUES")
     await db.commit()
     return SuccessResponse(success=True)
+
+
+@router.post("/reset-data", response_model=SuccessResponse)
+async def reset_data():
+    """Erase all items, visit counts, and reset database to zero."""
+    db = await get_db()
+    await db.execute("DELETE FROM items;")
+    await db.execute("DELETE FROM visits;")
+    try:
+        await db.execute("DELETE FROM sqlite_sequence;")
+    except Exception:
+        pass
+    await db.commit()
+
+    # Clear uploaded images
+    from app.config import UPLOAD_DIR
+    if UPLOAD_DIR.exists():
+        for file_path in UPLOAD_DIR.glob("*"):
+            if file_path.is_file() and not file_path.name.startswith("."):
+                try:
+                    file_path.unlink()
+                except Exception:
+                    pass
+
+    return SuccessResponse(success=True)
