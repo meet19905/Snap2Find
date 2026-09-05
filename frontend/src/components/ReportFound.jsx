@@ -4,6 +4,8 @@ import { API_BASE } from "../config";
 import PhotoInput from "./PhotoInput";
 import ResultCard from "./ResultCard";
 
+const CATEGORIES = ["calculator", "ID card", "wallet", "earbuds", "keys", "water bottle", "phone", "bag"];
+
 export default function ReportFound() {
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -55,6 +57,9 @@ export default function ReportFound() {
     formData.append("phone_number", phone);
     formData.append("description", description);
     formData.append("location", location);
+    if (resultCategory) {
+      formData.append("category", resultCategory);
+    }
 
     try {
       await axios.post(`${API_BASE}/api/report-found`, formData);
@@ -127,9 +132,32 @@ export default function ReportFound() {
 
       {status === "success" && (
         <div style={{ marginTop: "1rem" }}>
-          <p className="status-message success" style={{ marginBottom: "1.5rem" }}>
-            Tagged as "{resultCategory}".
-          </p>
+          <div style={{ marginBottom: "1.5rem", padding: "1rem", backgroundColor: "#f8fafc", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
+            <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.5rem", color: "#1e293b" }}>
+              Category (AI auto-detected — select to change):
+            </label>
+            <select
+              value={resultCategory}
+              onChange={(e) => setResultCategory(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "0.65rem",
+                borderRadius: "8px",
+                border: "1px solid #94a3b8",
+                fontSize: "1rem",
+                fontWeight: "600",
+                backgroundColor: "#ffffff",
+                color: "#0f172a",
+                cursor: "pointer"
+              }}
+            >
+              {CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {!addedToGallery ? (
             <div className="status-message" style={{ marginBottom: "1.5rem" }}>

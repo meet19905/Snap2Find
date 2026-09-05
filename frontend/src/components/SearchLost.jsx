@@ -4,6 +4,8 @@ import { API_BASE } from "../config";
 import PhotoInput from "./PhotoInput";
 import ResultCard from "./ResultCard";
 
+const CATEGORIES = ["calculator", "ID card", "wallet", "earbuds", "keys", "water bottle", "phone", "bag"];
+
 export default function SearchLost() {
   const [image, setImage] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -11,6 +13,7 @@ export default function SearchLost() {
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState("idle");
+  const [searchedCategory, setSearchedCategory] = useState("");
   const [matches, setMatches] = useState([]);
   const [addedToGallery, setAddedToGallery] = useState(false);
   const [isAddingToGallery, setIsAddingToGallery] = useState(false);
@@ -36,6 +39,7 @@ export default function SearchLost() {
 
     try {
       const res = await axios.post(`${API_BASE}/api/lost`, formData);
+      setSearchedCategory(res.data.searched_category || "");
       setMatches(res.data.matches);
       setStatus("success");
     } catch (err) {
@@ -53,6 +57,9 @@ export default function SearchLost() {
     formData.append("phone_number", phone);
     formData.append("description", description);
     formData.append("location", location);
+    if (searchedCategory) {
+      formData.append("category", searchedCategory);
+    }
 
     try {
       await axios.post(`${API_BASE}/api/report-lost`, formData);
@@ -124,6 +131,34 @@ export default function SearchLost() {
 
       {status === "success" && (
         <div style={{ marginTop: "1rem" }}>
+          {searchedCategory && (
+            <div style={{ marginBottom: "1.5rem", padding: "1rem", backgroundColor: "#f8fafc", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
+              <label style={{ display: "block", fontWeight: "bold", marginBottom: "0.5rem", color: "#1e293b" }}>
+                Category (AI auto-detected — select to change):
+              </label>
+              <select
+                value={searchedCategory}
+                onChange={(e) => setSearchedCategory(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "0.65rem",
+                  borderRadius: "8px",
+                  border: "1px solid #94a3b8",
+                  fontSize: "1rem",
+                  fontWeight: "600",
+                  backgroundColor: "#ffffff",
+                  color: "#0f172a",
+                  cursor: "pointer"
+                }}
+              >
+                {CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           {!addedToGallery ? (
             <div className="status-message" style={{ marginBottom: "1.5rem" }}>
               {matches.length > 0 && <p><strong>None of these are your item?</strong></p>}
