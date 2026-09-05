@@ -84,19 +84,33 @@ app.include_router(stats_router.router)
 app.include_router(ai_router.router)
 
 
-@app.get("/", response_model=HealthResponse)
-@app.get("/health", response_model=HealthResponse)
-@app.get("/api/health", response_model=HealthResponse)
-async def health_check():
-    """Health check endpoint matching the original backend response."""
-    return HealthResponse(status="Snap2Find backend is running")
+from fastapi.responses import FileResponse
 
-
-# Serve built frontend static assets if available
+# Serve built frontend static assets and index.html if available
 FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 if FRONTEND_DIST.exists():
     assets_dir = FRONTEND_DIST / "assets"
     if assets_dir.exists():
         app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+    @app.get("/")
+    async def serve_frontend():
+        """Serve the React application UI at root /."""
+        index_file = FRONTEND_DIST / "index.html"
+        if index_file.exists():
+            return FileResponse(str(index_file))
+        return HealthResponse(status="Snap2Find backend is running")
+else:
+    @app.get("/")
+    async def serve_root_health():
+        return HealthResponse(status="Snap2Find backend is running")
+
+
+@app.get("/health", response_model=HealthResponse)
+@app.get("/api/health", response_model=HealthResponse)
+async def health_check():
+    """Health check endpoint for API monitoring."""
+    return HealthResponse(status="Snap2Find backend is running")
+
 
 
