@@ -106,6 +106,13 @@ class SuccessResponse(BaseModel):
     success: bool
 
 
+class VisitResponse(BaseModel):
+    """POST /api/visit response."""
+
+    success: bool = True
+    totalVisitors: int
+
+
 class VerifyClaimResponse(BaseModel):
     """POST /api/items/{id}/verify-claim response."""
 

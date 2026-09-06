@@ -14,13 +14,6 @@ function App() {
   const [activeTab, setActiveTab] = useState("search");
   const [showSplash, setShowSplash] = useState(true);
 
-  useEffect(() => {
-    if (!sessionStorage.getItem("snap2find-visited")) {
-      axios.post(`${API_BASE}/api/visit`).catch(() => {});
-      sessionStorage.setItem("snap2find-visited", "true");
-    }
-  }, []);
-
   if (showSplash) {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;
   }

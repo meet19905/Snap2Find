@@ -6,9 +6,25 @@ export default function StatsStrip() {
   const [stats, setStats] = useState({ totalFound: 0, totalRecovered: 0, stillMissing: 0, totalVisitors: 0 });
 
   useEffect(() => {
+    // Record visit and update visitor count
+    axios
+      .post(`${API_BASE}/api/visit`)
+      .then((res) => {
+        if (res.data && typeof res.data.totalVisitors === "number") {
+          setStats((prev) => ({ ...prev, totalVisitors: res.data.totalVisitors }));
+        }
+      })
+      .catch(() => {});
+
+    // Fetch aggregate statistics
     axios
       .get(`${API_BASE}/api/stats`)
-      .then((res) => setStats(res.data))
+      .then((res) => {
+        setStats((prev) => ({
+          ...res.data,
+          totalVisitors: res.data.totalVisitors || prev.totalVisitors,
+        }));
+      })
       .catch(() => {});
   }, []);
 

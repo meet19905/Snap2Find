@@ -66,13 +66,18 @@ async def get_stats():
     )
 
 
-@router.post("/visit", response_model=SuccessResponse)
+from app.models import StatsResponse, SuccessResponse, VisitResponse
+
+
+@router.post("/visit", response_model=VisitResponse)
 async def record_visit():
-    """Record a page visit."""
+    """Record a page visit and return updated visitor count."""
     db = await get_db()
     await db.execute("INSERT INTO visits DEFAULT VALUES")
     await db.commit()
-    return SuccessResponse(success=True)
+    cursor = await db.execute("SELECT COUNT(*) as c FROM visits")
+    total_visitors = (await cursor.fetchone())["c"]
+    return VisitResponse(success=True, totalVisitors=total_visitors)
 
 
 @router.post("/reset-data", response_model=SuccessResponse)
