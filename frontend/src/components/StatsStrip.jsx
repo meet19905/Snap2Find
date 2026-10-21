@@ -1,31 +1,38 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { API_BASE } from "../config";
 
 export default function StatsStrip() {
   const [stats, setStats] = useState({ totalFound: 0, totalRecovered: 0, stillMissing: 0, totalVisitors: 0 });
+  const visitRecorded = useRef(false);
 
   useEffect(() => {
-    // Record visit and update visitor count
-    axios
-      .post(`${API_BASE}/api/visit`)
-      .then((res) => {
-        if (res.data && typeof res.data.totalVisitors === "number") {
-          setStats((prev) => ({ ...prev, totalVisitors: res.data.totalVisitors }));
-        }
-      })
-      .catch(() => {});
+    // Prevent React StrictMode in development from firing twice
+    if (visitRecorded.current) return;
+    visitRecorded.current = true;
 
-    // Fetch aggregate statistics
-    axios
-      .get(`${API_BASE}/api/stats`)
-      .then((res) => {
-        setStats((prev) => ({
-          ...res.data,
-          totalVisitors: res.data.totalVisitors || prev.totalVisitors,
-        }));
-      })
-      .catch(() => {});
+    async function recordVisitAndFetchStats() {
+      try {
+        // Record page visit first to get latest count
+        const visitRes = await axios.post(`${API_BASE}/api/visit`);
+        const latestVisitors = visitRes.data?.totalVisitors;
+
+        // Fetch overall aggregate statistics
+        const statsRes = await axios.get(`${API_BASE}/api/stats`);
+        setStats({
+          ...statsRes.data,
+          totalVisitors: latestVisitors ?? statsRes.data.totalVisitors,
+        });
+      } catch {
+        // Fallback: fetch stats if visit call fails
+        try {
+          const fallback = await axios.get(`${API_BASE}/api/stats`);
+          setStats(fallback.data);
+        } catch {}
+      }
+    }
+
+    recordVisitAndFetchStats();
   }, []);
 
   return (
