@@ -25,13 +25,18 @@ export default function ItemModal({ item, onClose, onRecovered }) {
     }
   }
 
+  function handleClearImage() {
+    setVerifyImage(null);
+    setPreview(null);
+  }
+
   async function handleConfirm() {
     if (claimantPhone.trim().length < 10) {
-      setError("Enter a valid phone number.");
+      setError("Please enter a valid 10-digit contact number.");
       return;
     }
     if (!verifyImage) {
-      setError("Please upload a photo of the item for verification.");
+      setError("Please upload a photo of the item or yourself with it for AI verification.");
       return;
     }
 
@@ -47,69 +52,164 @@ export default function ItemModal({ item, onClose, onRecovered }) {
       if (res.data.success) {
         onRecovered(item.id);
       } else {
-        setError("Unable to verify: " + (res.data.error || "The photo does not match closely enough."));
+        setError("Unable to verify: " + (res.data.error || "The visual features do not match closely enough."));
       }
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.error || "An error occurred during verification.");
+      setError(err.response?.data?.error || "An error occurred during verification. Please try again.");
     } finally {
       setRecovering(false);
     }
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose} aria-label="Close">
-          ✕
+        <button className="modal-close-btn" onClick={onClose} aria-label="Close modal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
         </button>
 
-        <div style={{ display: "flex", width: "100%", maxHeight: "50vh", overflow: "hidden", borderTopLeftRadius: "12px", borderTopRightRadius: "12px" }}>
-          <img src={item.imageUrl} alt={item.category} className="modal-image" style={{ width: item.matched_image_path ? "50%" : "100%", borderRadius: 0, objectFit: "cover" }} />
-          {item.matched_image_path && (
-            <img src={`${API_BASE}/${item.matched_image_path}`} alt="Match" className="modal-image" style={{ width: "50%", borderRadius: 0, objectFit: "cover", borderLeft: "2px dashed rgba(255,255,255,0.3)" }} />
+        {/* Modal Image Header */}
+        <div className="modal-image-header">
+          {item.matched_image_path ? (
+            <div className="card-media-split">
+              <div className="card-split-pane">
+                <img src={item.imageUrl} alt={item.category} />
+                <span className="card-split-label left">Your Upload</span>
+              </div>
+              <div className="card-split-divider" />
+              <div className="card-split-pane">
+                <img src={`${API_BASE}/${item.matched_image_path}`} alt="Database Match" />
+                <span className="card-split-label right">Database Item</span>
+              </div>
+            </div>
+          ) : (
+            <img src={item.imageUrl} alt={item.category} />
           )}
         </div>
 
-        <div className="modal-info">
-          <span className="tag-category">{item.category}</span>
-          {hasSimilarity && <span className="tag-similarity">{similarityPercent}% match</span>}
-          {item.description && <p className="tag-description">{item.description}</p>}
+        {/* Modal Details Body */}
+        <div className="modal-body">
+          <h3 className="modal-item-title">{item.category}</h3>
 
-          <a 
-            href={`tel:${item.phone_number}`} 
-            className="tag-call-btn" 
-            style={{ 
-              marginBottom: "1rem", 
-              display: "inline-block",
-              pointerEvents: (item.phone_number || "").includes('*') ? 'none' : 'auto',
-              textDecoration: "none"
-            }}
-          >
-            Contact: {item.phone_number || "No number"}
-          </a>
+          <div className="modal-meta-row">
+            {hasSimilarity && (
+              <span className="similarity-badge high">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+                {similarityPercent}% Match Confidence
+              </span>
+            )}
 
+            {item.type && (
+              <span className={`type-pill ${item.status === "recovered" ? "recovered" : item.type}`}>
+                {item.status === "recovered" ? "Reunited" : item.type === "lost" ? "Reported Lost" : "Found Item"}
+              </span>
+            )}
+
+            {item.location && (
+              <span className="card-location" style={{ margin: 0 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                {item.location}
+              </span>
+            )}
+          </div>
+
+          {item.description ? (
+            <p className="modal-description">{item.description}</p>
+          ) : (
+            <p className="modal-description" style={{ fontStyle: "italic", opacity: 0.6 }}>
+              No detailed notes attached to this item.
+            </p>
+          )}
+
+          {item.phone_number && (
+            <a
+              href={`tel:${item.phone_number}`}
+              className="contact-button"
+              style={{ marginBottom: "16px", textDecoration: "none" }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+              Direct Dial: {item.phone_number}
+            </a>
+          )}
+
+          {/* AI Claim Verification Section */}
           {item.status !== "recovered" && !item.hideClaimButton && (
-            <div className="claim-section">
-              <p style={{marginBottom: "0.5rem", fontSize: "0.9rem", color: "var(--text-color)"}}>
-                <strong>AI Verification Required</strong><br/>
-                Please upload a photo of you with the item, or an older photo of the item, to prove ownership.
+            <div className="claim-box">
+              <div className="claim-box-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--accent)" }}>
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                AI Ownership Verification
+              </div>
+              <p className="claim-box-desc">
+                To prevent false claims and protect belongings, upload a photo verifying ownership (e.g., you holding the item, an older photo showing this item in your possession, or receipt).
               </p>
-              
-              <PhotoInput preview={preview} onChange={handleImageChange} />
-              
-              <label className="field-label" style={{marginTop: "1rem"}}>
-                {item.type === 'lost' ? "Your phone number (to help the owner contact you)" : "Your phone number (so the finder can coordinate with you)"}
+
+              <PhotoInput preview={preview} onChange={handleImageChange} onClear={handleClearImage} />
+
+              <div className="form-group" style={{ marginTop: "14px", marginBottom: "14px" }}>
+                <label className="form-label" htmlFor="claim-phone">
+                  <span>Your Phone Number for Confirmation</span>
+                  <span className="form-label-required">*</span>
+                </label>
                 <input
+                  id="claim-phone"
                   type="tel"
+                  className="form-input"
                   placeholder="e.g. 9876543210"
                   value={claimantPhone}
                   onChange={(e) => setClaimantPhone(e.target.value)}
+                  pattern="[0-9]{10}"
+                  maxLength={10}
                 />
-              </label>
-              {error && <p className="status-message error">{error}</p>}
-              <button className="tag-recover-btn" onClick={handleConfirm} disabled={recovering}>
-                {recovering ? "Verifying with AI..." : "Verify & Claim"}
+              </div>
+
+              {error && (
+                <div style={{ color: "var(--error)", background: "var(--error-bg)", border: "1px solid var(--error-border)", padding: "10px 14px", borderRadius: "var(--radius-sm)", fontSize: "0.85rem", marginBottom: "14px" }}>
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="btn btn-primary btn-full"
+                onClick={handleConfirm}
+                disabled={recovering || !verifyImage || claimantPhone.length < 10}
+              >
+                {recovering ? (
+                  <>
+                    <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="2" x2="12" y2="6" />
+                      <line x1="12" y1="18" x2="12" y2="22" />
+                      <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" />
+                      <line x1="16.24" y1="16.24" x2="19.07" y2="19.07" />
+                      <line x1="2" y1="12" x2="6" y2="12" />
+                      <line x1="18" y1="12" x2="22" y2="12" />
+                      <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" />
+                      <line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
+                    </svg>
+                    Verifying Credentials with AI...
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                      <polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                    Confirm & Mark Reunited
+                  </>
+                )}
               </button>
             </div>
           )}
