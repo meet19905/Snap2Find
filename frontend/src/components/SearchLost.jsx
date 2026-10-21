@@ -74,7 +74,7 @@ export default function SearchLost() {
       setAddedToGallery(true);
     } catch (err) {
       console.error(err);
-      alert("Failed to add to gallery. Please verify the backend connection and try again.");
+      alert("Could not post to the board right now. Please try again.");
     } finally {
       setIsAddingToGallery(false);
     }
@@ -84,14 +84,14 @@ export default function SearchLost() {
     <div className="panel">
       <div className="panel-header">
         <h2 className="panel-title">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--accent)" }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--accent)" }}>
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
-          Search for Your Lost Item
+          Search for a Lost Item
         </h2>
         <p className="panel-subtitle">
-          Upload an image of your item. Our computer vision engine extracts deep embeddings and cross-matches against reported finds.
+          Upload a photo of what you lost. We'll search recently reported found items across campus and public spots.
         </p>
       </div>
 
@@ -117,33 +117,33 @@ export default function SearchLost() {
               maxLength={10}
               title="Please enter a valid 10-digit mobile number"
             />
-            <span className="form-hint">Required so a finder can securely coordinate returning your item.</span>
+            <span className="form-hint">So the person who found your item can contact you directly.</span>
           </div>
 
           <div className="form-group">
             <label className="form-label" htmlFor="lost-location">
-              <span>Estimated Lost Location</span>
+              <span>Where do you think you lost it?</span>
             </label>
             <input
               id="lost-location"
               type="text"
               className="form-input"
-              placeholder="e.g. Science Library, 2nd Floor, Desk 14"
+              placeholder="e.g. Central Library 2nd floor, Cafeteria"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
             />
-            <span className="form-hint">Optional: helps filter nearby items faster.</span>
+            <span className="form-hint">Helps narrow down matches from the same building or area.</span>
           </div>
         </div>
 
         <div className="form-group">
           <label className="form-label" htmlFor="lost-desc">
-            <span>Distinct Features or Description</span>
+            <span>Description & identifying details</span>
           </label>
           <textarea
             id="lost-desc"
             className="form-textarea"
-            placeholder="Unique stickers, scratches, case color, brand specifics, or identifiers..."
+            placeholder="Color, brand, keychains, stickers, case type, scratches, or any unique signs..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
@@ -167,33 +167,32 @@ export default function SearchLost() {
                 <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" />
                 <line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
               </svg>
-              Extracting Features & Scanning Database...
+              Searching reported found items...
             </>
           ) : (
             <>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
-              Scan & Find Visual Matches
+              Search Database by Photo
             </>
           )}
         </button>
       </form>
 
-      {/* AI Scanning Active Banner */}
+      {/* Human Loading Feedback */}
       {status === "loading" && (
         <div className="ai-scan-banner">
           <div className="scan-line" />
           <div className="scan-title">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" />
-              <path d="M12 6v6l4 2" />
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            Computer Vision Pipeline Active
+            Comparing photo against reported items
           </div>
           <div className="scan-desc">
-            Generating 512-dimension visual embeddings and running cosine similarity search across all found items...
+            Checking shape, color, and item category against all found belongings...
           </div>
         </div>
       )}
@@ -202,13 +201,13 @@ export default function SearchLost() {
       {status === "error" && (
         <div className="gallery-callout-card" style={{ borderColor: "var(--error-border)", background: "var(--error-bg)" }}>
           <div className="callout-text">
-            <h4 style={{ color: "var(--error)" }}>Search Request Failed</h4>
+            <h4 style={{ color: "var(--error)" }}>Could not complete search</h4>
             <p style={{ color: "var(--text-secondary)" }}>
-              Unable to reach the visual search service. Please ensure the backend and AI microservice are running, then try again.
+              The server could not be reached. Please check if the local server is running and try again.
             </p>
           </div>
           <button type="button" className="btn btn-secondary" onClick={handleSubmit}>
-            Retry Search
+            Try Again
           </button>
         </div>
       )}
@@ -216,17 +215,18 @@ export default function SearchLost() {
       {/* Search Results */}
       {status === "success" && (
         <div>
-          {/* AI Category Detection Header */}
+          {/* Category Confirmation Card */}
           {searchedCategory && (
             <div className="ai-detection-card">
               <div className="ai-detection-info">
                 <div className="ai-icon-badge">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                    <line x1="7" y1="7" x2="7.01" y2="7" />
                   </svg>
                 </div>
                 <div>
-                  <div className="ai-detection-label">AI Detected Classification</div>
+                  <div className="ai-detection-label">Identified Item Type</div>
                   <div className="ai-detection-value">{searchedCategory}</div>
                 </div>
               </div>
@@ -236,11 +236,11 @@ export default function SearchLost() {
                   className="form-select"
                   value={searchedCategory}
                   onChange={(e) => setSearchedCategory(e.target.value)}
-                  aria-label="Correct Category"
+                  aria-label="Change item category"
                 >
                   {CATEGORIES.map((cat) => (
                     <option key={cat} value={cat}>
-                      Category: {cat}
+                      Change to: {cat}
                     </option>
                   ))}
                 </select>
@@ -252,8 +252,8 @@ export default function SearchLost() {
           {!addedToGallery ? (
             <div className="gallery-callout-card">
               <div className="callout-text">
-                <h4>Didn't find your item among the matches?</h4>
-                <p>Register this lost item in the public gallery so community finders can match and contact you.</p>
+                <h4>None of these look like your item?</h4>
+                <p>Register this lost item on the public board so when someone finds it, they can identify and contact you.</p>
               </div>
               <button
                 type="button"
@@ -261,27 +261,27 @@ export default function SearchLost() {
                 onClick={handleAddToGallery}
                 disabled={isAddingToGallery}
               >
-                {isAddingToGallery ? "Listing..." : "Post to Public Lost Gallery"}
+                {isAddingToGallery ? "Posting..." : "Post to Lost & Found Board"}
               </button>
             </div>
           ) : (
             <div className="gallery-callout-card" style={{ borderColor: "var(--success-border)", background: "var(--success-bg)" }}>
               <div className="callout-text">
-                <h4 style={{ color: "var(--success)" }}>Listed in Public Gallery</h4>
-                <p style={{ color: "var(--text-secondary)" }}>Your item is now actively tracked. If anyone reports finding it, they will be prompted to contact you.</p>
+                <h4 style={{ color: "var(--success)" }}>Posted to the Community Board</h4>
+                <p style={{ color: "var(--text-secondary)" }}>Your item is now registered. Finders can spot it and call you at {phone}.</p>
               </div>
             </div>
           )}
 
-          {/* Results Grid */}
+          {/* Results Grid Header */}
           <div className="results-header-bar">
             <h3 className="results-heading">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--accent)" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--accent)" }}>
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
               </svg>
-              Matching Candidates ({matches.length})
+              Possible Matches ({matches.length})
             </h3>
-            <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Ranked by visual similarity</span>
+            <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Sorted by photo similarity</span>
           </div>
 
           {matches.length > 0 ? (
@@ -302,8 +302,8 @@ export default function SearchLost() {
           ) : (
             <div className="gallery-callout-card" style={{ textAlign: "center", justifyContent: "center" }}>
               <div className="callout-text">
-                <h4>No Close Visual Matches Found Yet</h4>
-                <p>Be sure you've posted your lost item to the gallery above so you can be notified when it turns up.</p>
+                <h4>No matching items found yet</h4>
+                <p>Make sure you clicked "Post to Lost & Found Board" above so anyone who finds it can get in touch with you.</p>
               </div>
             </div>
           )}

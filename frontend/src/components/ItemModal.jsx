@@ -14,6 +14,7 @@ export default function ItemModal({ item, onClose, onRecovered }) {
 
   const hasSimilarity = typeof item.similarity === "number";
   const similarityPercent = hasSimilarity ? Math.round(item.similarity * 100) : null;
+  const referenceId = `#LF-${String(item.id).padStart(4, "0")}`;
 
   function handleImageChange(e) {
     if (e.target.files && e.target.files[0]) {
@@ -32,11 +33,11 @@ export default function ItemModal({ item, onClose, onRecovered }) {
 
   async function handleConfirm() {
     if (claimantPhone.trim().length < 10) {
-      setError("Please enter a valid 10-digit contact number.");
+      setError("Please enter a valid 10-digit phone number.");
       return;
     }
     if (!verifyImage) {
-      setError("Please upload a photo of the item or yourself with it for AI verification.");
+      setError("Please upload a photo proving ownership (e.g. an older photo of the item).");
       return;
     }
 
@@ -52,11 +53,11 @@ export default function ItemModal({ item, onClose, onRecovered }) {
       if (res.data.success) {
         onRecovered(item.id);
       } else {
-        setError("Unable to verify: " + (res.data.error || "The visual features do not match closely enough."));
+        setError("Verification unsuccessful: " + (res.data.error || "The uploaded photo does not match closely enough."));
       }
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.error || "An error occurred during verification. Please try again.");
+      setError(err.response?.data?.error || "Could not complete verification right now. Please try again.");
     } finally {
       setRecovering(false);
     }
@@ -65,7 +66,7 @@ export default function ItemModal({ item, onClose, onRecovered }) {
   return (
     <div className="modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close-btn" onClick={onClose} aria-label="Close modal">
+        <button className="modal-close-btn" onClick={onClose} aria-label="Close">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18" />
             <line x1="6" y1="6" x2="18" y2="18" />
@@ -78,12 +79,12 @@ export default function ItemModal({ item, onClose, onRecovered }) {
             <div className="card-media-split">
               <div className="card-split-pane">
                 <img src={item.imageUrl} alt={item.category} />
-                <span className="card-split-label left">Your Upload</span>
+                <span className="card-split-label left">Your Photo</span>
               </div>
               <div className="card-split-divider" />
               <div className="card-split-pane">
                 <img src={`${API_BASE}/${item.matched_image_path}`} alt="Database Match" />
-                <span className="card-split-label right">Database Item</span>
+                <span className="card-split-label right">Reported Item</span>
               </div>
             </div>
           ) : (
@@ -93,21 +94,25 @@ export default function ItemModal({ item, onClose, onRecovered }) {
 
         {/* Modal Details Body */}
         <div className="modal-body">
-          <h3 className="modal-item-title">{item.category}</h3>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+            <h3 className="modal-item-title" style={{ margin: 0 }}>{item.category}</h3>
+            <span className="card-ref-badge">{referenceId}</span>
+          </div>
 
           <div className="modal-meta-row">
             {hasSimilarity && (
               <span className="similarity-badge high">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                </svg>
-                {similarityPercent}% Match Confidence
+                {similarityPercent}% match
               </span>
             )}
 
             {item.type && (
               <span className={`type-pill ${item.status === "recovered" ? "recovered" : item.type}`}>
-                {item.status === "recovered" ? "Reunited" : item.type === "lost" ? "Reported Lost" : "Found Item"}
+                {item.status === "recovered"
+                  ? "Returned"
+                  : item.type === "lost"
+                  ? "Lost Report"
+                  : "Found Item"}
               </span>
             )}
 
@@ -136,31 +141,31 @@ export default function ItemModal({ item, onClose, onRecovered }) {
               className="contact-button"
               style={{ marginBottom: "16px", textDecoration: "none" }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
               </svg>
-              Direct Dial: {item.phone_number}
+              <span>Call Contact Person: {item.phone_number}</span>
             </a>
           )}
 
-          {/* AI Claim Verification Section */}
+          {/* Claim Ownership Section */}
           {item.status !== "recovered" && !item.hideClaimButton && (
             <div className="claim-box">
               <div className="claim-box-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--accent)" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--accent)" }}>
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
-                AI Ownership Verification
+                Claim This Item
               </div>
               <p className="claim-box-desc">
-                To prevent false claims and protect belongings, upload a photo verifying ownership (e.g., you holding the item, an older photo showing this item in your possession, or receipt).
+                To prevent false claims, please upload a photo proving ownership (an older picture of the item, or a photo of you holding it).
               </p>
 
               <PhotoInput preview={preview} onChange={handleImageChange} onClear={handleClearImage} />
 
               <div className="form-group" style={{ marginTop: "14px", marginBottom: "14px" }}>
                 <label className="form-label" htmlFor="claim-phone">
-                  <span>Your Phone Number for Confirmation</span>
+                  <span>Your Phone Number (for pickup coordination)</span>
                   <span className="form-label-required">*</span>
                 </label>
                 <input
@@ -199,15 +204,14 @@ export default function ItemModal({ item, onClose, onRecovered }) {
                       <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" />
                       <line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
                     </svg>
-                    Verifying Credentials with AI...
+                    Verifying proof of ownership...
                   </>
                 ) : (
                   <>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                      <polyline points="22 4 12 14.01 9 11.01" />
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
                     </svg>
-                    Confirm & Mark Reunited
+                    Confirm & Claim Item
                   </>
                 )}
               </button>

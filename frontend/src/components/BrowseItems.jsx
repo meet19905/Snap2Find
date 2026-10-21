@@ -47,7 +47,7 @@ export default function BrowseItems({
     <div className="panel">
       <div className="panel-header">
         <h2 className="panel-title">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--accent)" }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--accent)" }}>
             <rect x="3" y="3" width="7" height="7" />
             <rect x="14" y="3" width="7" height="7" />
             <rect x="14" y="14" width="7" height="7" />
@@ -79,18 +79,18 @@ export default function BrowseItems({
               <input
                 type="text"
                 className="form-input"
-                placeholder="Filter by keyword or location (e.g. library, black, casio)..."
+                placeholder="Search by keyword, brand, or building..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{ paddingLeft: "36px" }}
               />
               <svg
-                width="16"
-                height="16"
+                width="15"
+                height="15"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth="2.5"
+                strokeWidth="2.2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-tertiary)" }}
@@ -106,7 +106,7 @@ export default function BrowseItems({
       {/* Loading state */}
       {fetchStatus === "loading" && (
         <div style={{ padding: "48px 0", textAlign: "center", color: "var(--text-muted)" }}>
-          <svg className="animate-spin" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 12px", display: "block", color: "var(--accent)" }}>
+          <svg className="animate-spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 12px", display: "block", color: "var(--accent)" }}>
             <line x1="12" y1="2" x2="12" y2="6" />
             <line x1="12" y1="18" x2="12" y2="22" />
             <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" />
@@ -116,7 +116,7 @@ export default function BrowseItems({
             <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" />
             <line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
           </svg>
-          Loading gallery items...
+          Loading listings...
         </div>
       )}
 
@@ -124,9 +124,9 @@ export default function BrowseItems({
       {fetchStatus === "error" && (
         <div className="gallery-callout-card" style={{ borderColor: "var(--error-border)", background: "var(--error-bg)" }}>
           <div className="callout-text">
-            <h4 style={{ color: "var(--error)" }}>Could Not Load Gallery Items</h4>
+            <h4 style={{ color: "var(--error)" }}>Could not load items</h4>
             <p style={{ color: "var(--text-secondary)" }}>
-              Check if the backend server is running and reachable.
+              Please check if the backend server is running and reload the page.
             </p>
           </div>
         </div>
@@ -136,7 +136,7 @@ export default function BrowseItems({
       {fetchStatus === "success" && filteredItems.length === 0 && (
         <div className="gallery-callout-card" style={{ textAlign: "center", justifyContent: "center", padding: "48px 24px" }}>
           <div className="callout-text">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--text-tertiary)", margin: "0 auto 12px", display: "block" }}>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--text-tertiary)", margin: "0 auto 12px", display: "block" }}>
               <circle cx="12" cy="12" r="10" />
               <line x1="8" y1="12" x2="16" y2="12" />
             </svg>
